@@ -27,6 +27,8 @@ jobs:
         run: |
           dotnet publish src/Redline.App/Redline.App.csproj -c Release -r win-x64 --self-contained -p:Platform=x64 -o smoke
           dotnet publish src/Redline.Helper/Redline.Helper.csproj -c Release -r win-x64 --self-contained -o smoke/helper
+          Get-ChildItem smoke -Filter *.pri | ForEach-Object { Write-Host "PRI: $($_.Name) $($_.Length)" }
+          Get-ChildItem smoke -Recurse -Include *.xbf,*.xaml | Select-Object -First 20 | ForEach-Object { Write-Host "XAML: $($_.FullName)" }
           $env:REDLINE_SMOKE = "1"
           $p = Start-Process -FilePath smoke/Redline.exe -ArgumentList "--demo" -PassThru
           Start-Sleep -Seconds 25

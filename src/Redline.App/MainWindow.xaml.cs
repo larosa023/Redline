@@ -29,13 +29,16 @@ public sealed partial class MainWindow : Window
         var dq = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
         Vm = new ShellViewModel(new HelperClient(_launcher.PipeName), a => { if (!dq.TryEnqueue(() => a())) a(); });
         Updates = new UpdateViewModel(new VelopackUpdateSource(), a => { if (!dq.TryEnqueue(() => a())) a(); });
+        CrashLog.Write("window ctor", null, show: false);
         InitializeComponent();
+        CrashLog.Write("window InitializeComponent done", null, show: false);
 
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "redline.ico"));
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1280, 900));
         if (AppWindow.Presenter is OverlappedPresenter op) { op.PreferredMinimumWidth = 760; op.PreferredMinimumHeight = 600; }
 
         _pages["Home"] = new HomePage(Vm);
+        CrashLog.Write("home page built", null, show: false);
         _pages["Tune"] = new TunePage(Vm);
         _pages["Fans"] = new FansPage(Vm);
         _pages["Auto-tune"] = new AutoTunePage(Vm);

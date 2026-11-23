@@ -14,13 +14,16 @@ public static class Program
         TaskScheduler.UnobservedTaskException += (_, e) => { CrashLog.Write("unobserved task", e.Exception, show: false); e.SetObserved(); };
         try
         {
+            CrashLog.Write("main", null, show: false);
             VelopackApp.Build()
                 .OnBeforeUninstallFastCallback(_ => UninstallHelper())
                 .Run();
 
             WinRT.ComWrappersSupport.InitializeComWrappers();
+            CrashLog.Write("before Application.Start", null, show: false);
             Application.Start(p =>
             {
+                CrashLog.Write("in Application.Start", null, show: false);
                 var ctx = new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread());
                 SynchronizationContext.SetSynchronizationContext(ctx);
                 _ = new App();
