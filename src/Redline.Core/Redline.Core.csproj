@@ -4,6 +4,9 @@
     <RootNamespace>Redline.Core</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Data/**/*.json;Score/*.json;Drivers/*.json;Cpu/*.json" LogicalName="Redline.Core.$([System.String]::Copy('%(RecursiveDir)').Replace('/', '.').Replace('\', '.'))%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="Redline.Core.Tests" />
   </ItemGroup>
 </Project>
