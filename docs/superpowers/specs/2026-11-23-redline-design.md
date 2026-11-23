@@ -3,7 +3,7 @@
 **Date:** 2026-11-23
 **Owner:** Anthony LaRosa (larosa023)
 **Repo:** github.com/larosa023/Redline (public)
-**Status:** Draft, awaiting approval
+**Status:** Approved by Anthony 2026-11-23
 
 ---
 
@@ -241,9 +241,18 @@ powers the before/after check (scored by work done per second).
 
 - **UI:** WinUI 3 (Windows App SDK), unpackaged, self-contained .NET.
   Charts via LiveCharts2 (or equivalent); tray via H.NotifyIcon.
-- **Admin rights:** tuning needs administrator rights. The app runs
-  elevated. Starting with Windows uses a scheduled task with "run with
-  highest privileges" so users don't get a UAC prompt every boot.
+- **Two processes:**
+  - **Redline Helper:** a small Windows service installed once during
+    setup (the only admin prompt). It is the only part that talks to the
+    hardware (vendor SDKs, LibreHardwareMonitor, power-plan settings),
+    and it enforces every safety rule: safe range, temperature guard,
+    safe start, keep-or-revert countdown, apply-at-boot delay. It keeps
+    the temperature guard and per-game switching running when the
+    window is closed.
+  - **Redline app (UI):** runs as a normal user, never elevated. Talks
+    to the helper over a local named pipe (current user only).
+  - The helper validates every request itself; the UI cannot bypass a
+    safety rule.
 - **Per-game profiles:** watch process starts/stops; match on executable
   name chosen by the user from a list of running/installed games.
 - **Settings & profiles** stored as JSON in `%AppData%\Redline`.
@@ -259,14 +268,55 @@ powers the before/after check (scored by work done per second).
   Windows SmartScreen shows an "unknown publisher" warning on first
   install; the README and download page explain how to proceed.
 
-### 6.9 Visual design
+### 6.9 Visual design (chosen by Anthony from mockups)
 
-- Dark and light themes, several accent colors, Windows 11 Mica
-  background.
-- Big readable numbers, card-based layout, plenty of whitespace, smooth
-  transitions. Feels like a modern phone settings app, not a cockpit.
-- Before UI work starts, Claude shows Anthony 2–3 visual mockups to pick
-  a direction.
+Mockups: https://claude.ai/artifact/D2Ao6hMm1QG45KCdG7XEe5 (page
+"Round 2 — themes"). Anthony picked the **Daylight** direction: top
+pill navigation, rounded cards, big readable numbers, plenty of space.
+It must feel like a modern consumer app, not a cockpit.
+
+- **Five themes:** Daylight (light gray / red), Midnight (navy / coral),
+  Ember (warm charcoal / orange), Glacier (icy light / blue), Neon
+  (near-black / pink + lime). Theme picker in the header. All text meets
+  WCAG AA contrast in every theme.
+- **Personality:**
+  - **Tachometer** hero gauge with a marked "RED" zone (ties to the
+    name), gently animated needle.
+  - **Plain-language status chips:** e.g. "Cruising", "New personal
+    best" (highest stable clock seen).
+  - **Friendly copy** throughout ("Your card's right where it likes to
+    be…"). Never cutesy in warnings or errors.
+  - **Default profiles:** **Send it** (max performance), **Whisper**
+    (cool and quiet / Efficiency), **Factory** (stock). Each has an
+    icon; users can rename and add their own.
+  - **"This week" recap card:** game time, energy saved, money saved,
+    crashes.
+- Fonts: Space Grotesk for numbers/headings, Inter for text (both
+  bundled, open licensed).
+
+### 6.10 How it behaves (opening, applying, closing)
+
+Rule: **nothing changes on the hardware unless the user clearly asks.**
+
+- **Opening Redline never applies anything.** First launch is all
+  factory; users can browse, watch stats and move sliders freely.
+- A status line always says which state the card is in: "Factory,
+  nothing applied" or "<Profile> is active".
+- **Slider changes are staged.** Nothing reaches the card until
+  **Apply**, which shows a summary of the changes.
+- **Keep-or-revert countdown:** after Apply, "Keep these settings?"
+  with a 15-second countdown; no confirmation (e.g. a frozen screen)
+  reverts to the previous settings.
+- **Switching to a saved profile** (app, tray, hotkey, per-game) applies
+  immediately, since those were already confirmed.
+- **Start with Windows: off by default.** Can be enabled only for a
+  profile that passed a stability test; applies ~15 s after login; safe
+  start still applies after any crash.
+- **Closing the window with a tune active** sends Redline to the tray.
+  **Quit** asks: back to factory (default) or keep the tune.
+- Tunes are never written to card firmware; they live in the driver and
+  clear on reboot/driver reset. Reopening the app shows the card's real
+  current state.
 
 ## 7. Constraints
 
@@ -298,7 +348,8 @@ powers the before/after check (scored by work done per second).
    not show it; this avoids anti-cheat bans.
 4. **PawnIO** is offered as an optional install for CPU temperatures,
    rather than bundling any driver.
-5. **The app runs as administrator**, with a scheduled task for startup.
+5. **A background helper service** does all hardware work and enforces
+   safety; the UI never runs as administrator.
 6. **WinUI 3** for the UI framework.
 7. **Simulated GPU / demo mode** included so the app can be developed and
    shown without special hardware.
