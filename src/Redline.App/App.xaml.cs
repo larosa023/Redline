@@ -13,7 +13,8 @@ public partial class App : Application
         CrashLog.Write("app ctor", null, show: false);
         InitializeComponent();
         CrashLog.Write("app InitializeComponent done", null, show: false);
-        ThemeBrushes.Register(Resources);
+        try { ThemeBrushes.Register(Resources); }
+        catch (Exception e) { CrashLog.Write("brushes", e, show: true); throw; }
         CrashLog.Write("brushes registered", null, show: false);
     }
 
