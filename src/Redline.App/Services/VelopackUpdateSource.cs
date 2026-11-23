@@ -5,7 +5,7 @@ using Velopack.Sources;
 namespace Redline.App.Services;
 
 /// <summary>Updates from GitHub Releases (the only network call Redline makes).</summary>
-public sealed class VelopackUpdateSource : IUpdateSource
+public sealed class VelopackUpdateSource : Redline.App.ViewModels.IUpdateSource
 {
     const string Repo = "https://github.com/larosa023/Redline";
     readonly UpdateManager _mgr;
