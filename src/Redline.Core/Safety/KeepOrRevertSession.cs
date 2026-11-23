@@ -12,16 +12,19 @@ public sealed class KeepOrRevertSession : IDisposable
     readonly TimeProvider _time;
     readonly DateTimeOffset _deadline;
     readonly ITimer _timer;
+    readonly Action<KeepOrRevertOutcome>? _onDone;
     readonly TaskCompletionSource<KeepOrRevertOutcome> _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    public KeepOrRevertSession(TuneSettings previous, TuneSettings applied, TimeProvider time, TimeSpan? timeout = null)
+    public KeepOrRevertSession(TuneSettings previous, TuneSettings applied, TimeProvider time, TimeSpan? timeout = null,
+        Action<KeepOrRevertOutcome>? onDone = null)
     {
+        _onDone = onDone;
         Previous = previous;
         Applied = applied;
         _time = time;
         var t = timeout ?? DefaultTimeout;
         _deadline = time.GetUtcNow() + t;
-        _timer = time.CreateTimer(_ => _tcs.TrySetResult(KeepOrRevertOutcome.Reverted), null, t, Timeout.InfiniteTimeSpan);
+        _timer = time.CreateTimer(_ => Finish(KeepOrRevertOutcome.Reverted), null, t, Timeout.InfiniteTimeSpan);
     }
 
     public Guid Token { get; } = Guid.NewGuid();
@@ -39,10 +42,16 @@ public sealed class KeepOrRevertSession : IDisposable
         }
     }
 
-    public void Confirm()
+    public void Confirm() => Finish(KeepOrRevertOutcome.Kept);
+
+    void Finish(KeepOrRevertOutcome o)
     {
-        if (_tcs.TrySetResult(KeepOrRevertOutcome.Kept)) _timer.Dispose();
+        if (!_tcs.TrySetResult(o)) return;
+        _timer.Dispose();
+        _onDone?.Invoke(o);
     }
+
+    public void RevertNow() => Finish(KeepOrRevertOutcome.Reverted);
 
     public void Dispose() => _timer.Dispose();
 }

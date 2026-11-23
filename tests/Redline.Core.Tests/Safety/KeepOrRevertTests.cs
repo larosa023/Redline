@@ -61,3 +61,34 @@ public class KeepOrRevertTests
                         new KeepOrRevertSession(TuneSettings.Factory, Applied, t).Token);
     }
 }
+
+public class KeepOrRevertRevertNowTests
+{
+    [Fact]
+    public async Task RevertNow_CompletesReverted()
+    {
+        var s = new KeepOrRevertSession(TuneSettings.Factory, TuneSettings.Factory with { CoreOffsetMhz = 15 }, new FakeTime());
+        s.RevertNow();
+        Assert.Equal(KeepOrRevertOutcome.Reverted, await s.Completion);
+        s.Confirm();
+        Assert.Equal(KeepOrRevertOutcome.Reverted, await s.Completion);
+    }
+}
+
+public class KeepOrRevertCallbackTests
+{
+    [Fact]
+    public void OnDone_RaisedSynchronously_OnTimeoutAndConfirm()
+    {
+        var t = new FakeTime();
+        KeepOrRevertOutcome? got = null;
+        _ = new KeepOrRevertSession(TuneSettings.Factory, TuneSettings.Factory, t, onDone: o => got = o);
+        t.Advance(TimeSpan.FromSeconds(16));
+        Assert.Equal(KeepOrRevertOutcome.Reverted, got);
+
+        KeepOrRevertOutcome? got2 = null;
+        var s2 = new KeepOrRevertSession(TuneSettings.Factory, TuneSettings.Factory, t, onDone: o => got2 = o);
+        s2.Confirm();
+        Assert.Equal(KeepOrRevertOutcome.Kept, got2);
+    }
+}

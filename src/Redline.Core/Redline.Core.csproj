@@ -8,5 +8,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Redline.Core.Tests" />
+    <InternalsVisibleTo Include="Redline.Engine.Tests" />
   </ItemGroup>
 </Project>
