@@ -71,6 +71,21 @@ and safety nets so a bad setting can't leave someone stuck.
     - **Undo history:** every change is logged and can be stepped back.
     - **Driver checks:** warn when a GPU driver is too old or known-bad
       for tuning.
+    - **Safety-first defaults** (Anthony: "as safe as possible"):
+      - **Power limit is never raised by auto-tune** unless the user
+        turns that on. Gains come from clock offsets within the stock
+        power limit, or from lowering power (Efficiency).
+      - **16-pin connector warning:** on cards with the 12VHPWR /
+        12V-2x6 connector (e.g. RTX 40/50 series), raising the power limit
+        above 100% shows a one-time warning about connector load and
+        seating.
+      - **Safe range by default:** sliders stop inside the driver's
+        allowed range at conservative Redline limits; the full driver
+        range unlocks only via an "Advanced" toggle with a warning.
+      - **Safety margin:** auto-tune's final result backs off from the
+        highest passing step (not the edge of stability).
+      - **Hard temperature ceiling:** the temperature guard has a
+        default limit and cannot be disabled while a tune is applied.
 20. **"Send report" button:** bundles logs and hardware info into one file
     for bug reports (user sends it themselves).
 21. **Privacy:** nothing leaves the PC except the update check. No
