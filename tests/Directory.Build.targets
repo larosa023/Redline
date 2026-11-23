@@ -1,0 +1,11 @@
+<Project>
+  <!-- Test projects: real xunit in CI; offline shim when REDLINE_OFFLINE=1 (workspace without NuGet access). -->
+  <ItemGroup Condition="'$(IsTestProject)' == 'true' And '$(REDLINE_OFFLINE)' != '1'">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsTestProject)' == 'true' And '$(REDLINE_OFFLINE)' == '1'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Offline/Xunit.Shim/Xunit.Shim.csproj" />
+  </ItemGroup>
+</Project>
