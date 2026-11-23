@@ -184,3 +184,19 @@ public class ViewModelTests
         Assert.False(s.Tune.CountdownVisible);
     }
 }
+
+public class ShellThemeTests
+{
+    [Fact]
+    public async Task SetTheme_SendsUpdateSettings()
+    {
+        var h = new FakeHelper();
+        var s = new ShellViewModel(h, FakeHelper.Inline);
+        await s.LoadAsync();
+        await s.SetThemeAsync("neon");
+        Assert.Equal("neon", s.Theme);
+        var (type, payload) = h.Sent.Last();
+        Assert.Equal(MessageTypes.UpdateSettings, type);
+        Assert.Equal("neon", ((SettingsRequest)payload!).Settings.Theme);
+    }
+}

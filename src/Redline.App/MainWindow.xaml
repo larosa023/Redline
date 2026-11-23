@@ -1,0 +1,72 @@
+<Window
+    x:Class="Redline.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Redline.App"
+    Title="Redline">
+  <Grid x:Name="Root" Background="{StaticResource RlBg}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <!-- Header: logo, pill navigation, theme picker -->
+    <Grid Grid.Row="0" Padding="32,20,32,8" ColumnSpacing="16">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <Image Source="ms-appx:///Assets/redline.ico" Width="30" Height="30" />
+        <TextBlock Text="Redline" FontFamily="{StaticResource RlDisplay}" FontSize="21" FontWeight="Bold" Foreground="{StaticResource RlText}" VerticalAlignment="Center" />
+      </StackPanel>
+      <Border Grid.Column="1" HorizontalAlignment="Left" Margin="20,0,0,0" Background="{StaticResource RlSurface}" BorderBrush="{StaticResource RlLine}" BorderThickness="1" CornerRadius="{StaticResource RlPillRadius}" Padding="5">
+        <StackPanel x:Name="Nav" Orientation="Horizontal" Spacing="4" />
+      </Border>
+      <Border Grid.Column="2" Background="{StaticResource RlSurface}" BorderBrush="{StaticResource RlLine}" BorderThickness="1" CornerRadius="{StaticResource RlPillRadius}" Padding="14,6,8,6">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock x:Name="ThemeName" FontSize="13" Foreground="{StaticResource RlMuted}" VerticalAlignment="Center" Margin="0,0,4,0" />
+          <StackPanel x:Name="Swatches" Orientation="Horizontal" Spacing="6" />
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- Status line + keep-or-revert banner + messages -->
+    <StackPanel Grid.Row="1" Padding="32,4,32,4" Spacing="8">
+      <TextBlock Text="{x:Bind Vm.Status, Mode=OneWay}" FontSize="13" Foreground="{StaticResource RlMuted}" />
+      <Border Visibility="{x:Bind Vm.Tune.CountdownVisible, Mode=OneWay}" Background="{StaticResource RlAccent}" CornerRadius="16" Padding="18,12">
+        <Grid ColumnSpacing="12">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <TextBlock Text="{x:Bind Vm.Tune.CountdownText, Mode=OneWay}" Foreground="{StaticResource RlOnAccent}" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Content="Keep" Command="{x:Bind Vm.Tune.KeepCommand}" MinHeight="40" MinWidth="88" Background="{StaticResource RlOnAccent}" Foreground="{StaticResource RlAccent}" FontWeight="Bold" CornerRadius="12" />
+          <Button Grid.Column="2" Content="Revert" Command="{x:Bind Vm.Tune.RevertCommand}" MinHeight="40" MinWidth="88" CornerRadius="12" />
+        </Grid>
+      </Border>
+      <InfoBar Severity="Error" IsOpen="True" IsClosable="False" Message="{x:Bind Vm.LastError, Mode=OneWay}" Visibility="{x:Bind local:Fmt.VisText(Vm.LastError), Mode=OneWay}" />
+    </StackPanel>
+
+    <!-- Pages -->
+    <ScrollViewer Grid.Row="2" x:Name="PageHost" Padding="32,8,32,36" VerticalScrollBarVisibility="Auto" />
+
+    <!-- Helper missing -->
+    <Grid Grid.Row="0" Grid.RowSpan="3" Background="{StaticResource RlBg}" Visibility="{x:Bind Vm.HelperMissing, Mode=OneWay}">
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14" MaxWidth="520">
+        <TextBlock Text="Redline Helper isn't running" FontFamily="{StaticResource RlDisplay}" FontSize="30" FontWeight="SemiBold" Foreground="{StaticResource RlText}" TextWrapping="Wrap" />
+        <TextBlock Text="Redline needs its background helper to read and tune your hardware. Repair sets it up again with one admin prompt." Foreground="{StaticResource RlMuted}" FontSize="15" TextWrapping="Wrap" />
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Button Content="Repair" Command="{x:Bind Vm.RepairCommand}" MinHeight="44" Padding="20,10" Background="{StaticResource RlAccent}" Foreground="{StaticResource RlOnAccent}" FontWeight="Bold" CornerRadius="14" />
+          <Button Content="Try again" Command="{x:Bind Vm.RetryCommand}" MinHeight="44" Padding="20,10" CornerRadius="14" />
+        </StackPanel>
+      </StackPanel>
+    </Grid>
+
+    <!-- Toasts (filled in code) -->
+    <StackPanel Grid.Row="2" x:Name="ToastHost" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,24" MaxWidth="420" Spacing="8" />
+  </Grid>
+</Window>

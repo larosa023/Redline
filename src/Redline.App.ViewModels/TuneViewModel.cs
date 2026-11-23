@@ -11,9 +11,9 @@ public sealed class SliderViewModel(Control control, string label, string unit, 
     public Control Control { get; } = control;
     public string Label { get; } = label;
     public string Unit { get; } = unit;
-    public int Min { get => _min; set => SetProperty(ref _min, value); }
-    public int Max { get => _max; set => SetProperty(ref _max, value); }
-    public int Step { get => _step; set => SetProperty(ref _step, value); }
+    public int Min { get => _min; set { if (SetProperty(ref _min, value)) OnPropertyChanged(nameof(MinD)); } }
+    public int Max { get => _max; set { if (SetProperty(ref _max, value)) OnPropertyChanged(nameof(MaxD)); } }
+    public int Step { get => _step; set { if (SetProperty(ref _step, value)) OnPropertyChanged(nameof(StepD)); } }
     public int Default { get => _default; set => SetProperty(ref _default, value); }
 
     public int Value
@@ -22,13 +22,19 @@ public sealed class SliderViewModel(Control control, string label, string unit, 
         set
         {
             var v = Math.Clamp(Step > 1 ? (int)Math.Round(value / (double)Step) * Step : value, Min, Math.Max(Min, Max));
-            if (SetProperty(ref _value, v)) { OnPropertyChanged(nameof(Display)); changed(); }
+            if (SetProperty(ref _value, v)) { OnPropertyChanged(nameof(Display)); OnPropertyChanged(nameof(ValueD)); changed(); }
         }
     }
 
-    internal void SetSilently(int v) { _value = v; OnPropertyChanged(nameof(Value)); OnPropertyChanged(nameof(Display)); }
+    internal void SetSilently(int v) { _value = v; OnPropertyChanged(nameof(Value)); OnPropertyChanged(nameof(ValueD)); OnPropertyChanged(nameof(Display)); }
 
     public string Display => Control == Control.PowerLimit ? $"{Value}%" : $"{Value:+0;−0;0} {Unit}";
+
+    // double-typed mirrors for UI sliders
+    public double ValueD { get => Value; set => Value = (int)Math.Round(value); }
+    public double MinD => Min;
+    public double MaxD => Max;
+    public double StepD => Step;
 }
 
 /// <summary>Manual tuning. Slider changes are staged; nothing reaches the card until Apply, then a 15-second keep-or-revert.</summary>

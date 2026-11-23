@@ -26,6 +26,7 @@ public sealed class ShellViewModel : ObservableObject
         AutoTune = new AutoTuneViewModel(this);
         RepairCommand = new RelayCommand(() => RepairRequested?.Invoke());
         RetryCommand = new AsyncRelayCommand(LoadAsync);
+        SetThemeCommand = new ParamCommand<string>(k => _ = SetThemeAsync(k));
         _helper.EventReceived += m => _post(() => OnEvent(m));
         _helper.Disconnected += () => _post(() => HelperMissing = true);
     }
@@ -36,6 +37,18 @@ public sealed class ShellViewModel : ObservableObject
     public AutoTuneViewModel AutoTune { get; }
     public RelayCommand RepairCommand { get; }
     public AsyncRelayCommand RetryCommand { get; }
+    public ParamCommand<string> SetThemeCommand { get; }
+
+    public async Task SetThemeAsync(string key)
+    {
+        Theme = key;
+        if (State is { } s) await SendAsync(MessageTypes.UpdateSettings, new SettingsRequest(s.Settings with { Theme = key }));
+    }
+
+    public async Task UpdateSettingsAsync(Func<AppSettings, AppSettings> change)
+    {
+        if (State is { } s) await SendAsync(MessageTypes.UpdateSettings, new SettingsRequest(change(s.Settings)));
+    }
     public ObservableCollection<ToastItem> Toasts { get; } = new();
 
     /// <summary>Raised when the user asks to repair the helper (the app runs the elevated installer).</summary>

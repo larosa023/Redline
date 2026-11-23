@@ -43,6 +43,7 @@ public sealed class FakeHelper : IHelperClient
         if (!Available) throw new HelperUnavailableException("Redline Helper isn't running.");
         Sent.Add((type, payload));
         if (Respond?.Invoke(type, payload) is { } r) return Task.FromResult(r);
+        if (type == MessageTypes.UpdateSettings) State = State with { Settings = ((SettingsRequest)payload!).Settings };
         return Task.FromResult(type switch
         {
             MessageTypes.GetState => IpcMessage.OkFor(0, State),
