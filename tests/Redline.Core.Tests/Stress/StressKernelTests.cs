@@ -4,6 +4,10 @@ using Xunit;
 
 namespace Redline.Core.Tests.Stress;
 
+[CollectionDefinition("cpu-heavy", DisableParallelization = true)]
+public class CpuHeavyCollection { }
+
+[Collection("cpu-heavy")]
 public class StressKernelTests
 {
     [Fact]

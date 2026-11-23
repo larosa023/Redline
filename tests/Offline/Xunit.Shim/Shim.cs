@@ -11,6 +11,12 @@ public sealed class TheoryAttribute : FactAttribute { }
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
 public sealed class InlineDataAttribute(params object?[] data) : Attribute { public object?[] Data { get; } = data; }
 
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class CollectionAttribute(string name) : Attribute { public string Name { get; } = name; }
+
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class CollectionDefinitionAttribute(string name) : Attribute { public string Name { get; } = name; public bool DisableParallelization { get; set; } }
+
 public interface IAsyncLifetime { Task InitializeAsync(); Task DisposeAsync(); }
 
 public sealed class XunitException(string message) : Exception(message);

@@ -24,6 +24,12 @@ public static class StressKernel
 
     public static uint Checksum(uint seed, uint iter, uint n)
     {
+        if (n <= 1u << 20)
+        {
+            uint sum = 0;
+            for (uint i = 0; i < n; i++) sum = unchecked(sum + Element(i, seed, iter));
+            return sum;
+        }
         long total = 0;
         var chunks = Math.Max(1, Environment.ProcessorCount * 4);
         var size = (n + (uint)chunks - 1) / (uint)chunks;
