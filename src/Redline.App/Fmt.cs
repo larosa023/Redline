@@ -11,6 +11,7 @@ public static class Fmt
     public static string DegN(double? v) => v is > 0 ? $"{v:0}°" : "—";
     public static string Watts(double v) => v <= 0 ? "—" : $"{v:0} W";
     public static string Pct(double v) => $"{v:0}%";
+    public static string Busy(double v) => $"GPU {v:0}% busy";
     public static string PctN(double? v) => v is { } x ? $"{x:0}% busy" : "";
     public static Visibility Vis(bool b) => b ? Visibility.Visible : Visibility.Collapsed;
     public static Visibility NotVis(bool b) => b ? Visibility.Collapsed : Visibility.Visible;

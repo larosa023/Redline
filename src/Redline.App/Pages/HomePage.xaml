@@ -88,7 +88,7 @@
         <StackPanel Spacing="4">
           <TextBlock Text="Fans" FontSize="13" Foreground="{StaticResource RlMuted}" />
           <TextBlock Text="{x:Bind local:Fmt.Pct(Vm.Home.FanPct), Mode=OneWay}" FontFamily="{StaticResource RlDisplay}" FontSize="36" FontWeight="SemiBold" Foreground="{StaticResource RlText}" />
-          <TextBlock Text="{x:Bind local:Fmt.Pct(Vm.Home.UsagePct), Mode=OneWay}" FontSize="13" Foreground="{StaticResource RlMuted}" />
+          <TextBlock Text="{x:Bind local:Fmt.Busy(Vm.Home.UsagePct), Mode=OneWay}" FontSize="13" Foreground="{StaticResource RlMuted}" />
         </StackPanel>
       </Border>
       <Border Grid.Column="3" Background="{StaticResource RlSurface}" BorderBrush="{StaticResource RlLine}" BorderThickness="1" CornerRadius="22" Padding="20">
