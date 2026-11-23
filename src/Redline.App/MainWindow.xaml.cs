@@ -21,12 +21,14 @@ public sealed partial class MainWindow : Window
     string _current = "Home";
 
     public ShellViewModel Vm { get; }
+    public UpdateViewModel Updates { get; }
 
     public MainWindow(bool demo)
     {
         _launcher = new HelperLauncher(demo);
         var dq = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
         Vm = new ShellViewModel(new HelperClient(_launcher.PipeName), a => { if (!dq.TryEnqueue(() => a())) a(); });
+        Updates = new UpdateViewModel(new VelopackUpdateSource(), a => { if (!dq.TryEnqueue(() => a())) a(); });
         InitializeComponent();
 
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "redline.ico"));
@@ -55,6 +57,11 @@ public sealed partial class MainWindow : Window
     {
         await _launcher.EnsureStartedAsync();
         await Vm.LoadAsync();
+        await Updates.CheckAsync();
+        var timer = DispatcherQueue.CreateTimer();
+        timer.Interval = TimeSpan.FromHours(6);
+        timer.Tick += async (_, _) => await Updates.CheckAsync();
+        timer.Start();
     }
 
     void OnVmChanged(object? sender, PropertyChangedEventArgs e)

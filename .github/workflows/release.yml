@@ -1,0 +1,43 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. 0.9.0-beta.1)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Version
+        id: v
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then V="${{ github.event.inputs.version }}"; else V="${GITHUB_REF_NAME#v}"; fi
+          echo "version=$V" >> $GITHUB_OUTPUT
+          if [[ "$V" == *-* ]]; then echo "pre=--pre" >> $GITHUB_OUTPUT; else echo "pre=" >> $GITHUB_OUTPUT; fi
+      - name: Test
+        run: dotnet test Redline.sln -c Release
+      - name: Publish app
+        run: dotnet publish src/Redline.App/Redline.App.csproj -c Release -r win-x64 --self-contained -p:Version=${{ steps.v.outputs.version }} -p:Platform=x64 -o publish
+      - name: Publish helper
+        run: dotnet publish src/Redline.Helper/Redline.Helper.csproj -c Release -r win-x64 --self-contained -p:Version=${{ steps.v.outputs.version }} -o publish/helper
+      - name: Licenses
+        shell: bash
+        run: cp LICENSE THIRD-PARTY-NOTICES.md publish/
+      - name: Pack
+        run: |
+          dotnet tool install -g vpk --version 0.0.1298
+          vpk pack -u Redline -v ${{ steps.v.outputs.version }} -p publish -e Redline.exe -i src/Redline.App/Assets/redline.ico --packTitle Redline --packAuthors "Anthony LaRosa"
+      - name: Upload to GitHub Releases
+        run: vpk upload github --repoUrl https://github.com/larosa023/Redline --publish ${{ steps.v.outputs.pre }} --releaseName "Redline ${{ steps.v.outputs.version }}" --tag v${{ steps.v.outputs.version }} --token ${{ secrets.GITHUB_TOKEN }}

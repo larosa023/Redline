@@ -49,6 +49,15 @@
         </Grid>
       </Border>
       <InfoBar Severity="Error" IsOpen="True" IsClosable="False" Message="{x:Bind Vm.LastError, Mode=OneWay}" Visibility="{x:Bind local:Fmt.VisText(Vm.LastError), Mode=OneWay}" />
+      <InfoBar Severity="Warning" IsOpen="True" IsClosable="False" Title="Redline Helper needs an update"
+               Message="The background helper is from a different version of Redline. Updating it takes one admin prompt."
+               Visibility="{x:Bind Vm.HelperOutdated, Mode=OneWay}">
+        <InfoBar.ActionButton><Button Content="Update helper" Command="{x:Bind Vm.RepairCommand}" /></InfoBar.ActionButton>
+      </InfoBar>
+      <InfoBar Severity="Success" IsOpen="True" IsClosable="False" Title="{x:Bind Updates.Title, Mode=OneWay}" Message="{x:Bind Updates.Notes, Mode=OneWay}"
+               Visibility="{x:Bind Updates.Available, Mode=OneWay}">
+        <InfoBar.ActionButton><Button Content="Update and restart" Command="{x:Bind Updates.UpdateCommand}" /></InfoBar.ActionButton>
+      </InfoBar>
     </StackPanel>
 
     <!-- Pages -->
@@ -57,10 +66,10 @@
     <!-- Helper missing -->
     <Grid Grid.Row="0" Grid.RowSpan="3" Background="{StaticResource RlBg}" Visibility="{x:Bind Vm.HelperMissing, Mode=OneWay}">
       <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14" MaxWidth="520">
-        <TextBlock Text="Redline Helper isn't running" FontFamily="{StaticResource RlDisplay}" FontSize="30" FontWeight="SemiBold" Foreground="{StaticResource RlText}" TextWrapping="Wrap" />
-        <TextBlock Text="Redline needs its background helper to read and tune your hardware. Repair sets it up again with one admin prompt." Foreground="{StaticResource RlMuted}" FontSize="15" TextWrapping="Wrap" />
+        <TextBlock Text="Let's set up Redline Helper" FontFamily="{StaticResource RlDisplay}" FontSize="30" FontWeight="SemiBold" Foreground="{StaticResource RlText}" TextWrapping="Wrap" />
+        <TextBlock Text="Redline uses a small background helper to read and tune your hardware safely. Setting it up takes one admin prompt. If you've done this before, the helper may have stopped; this fixes it." Foreground="{StaticResource RlMuted}" FontSize="15" TextWrapping="Wrap" />
         <StackPanel Orientation="Horizontal" Spacing="10">
-          <Button Content="Repair" Command="{x:Bind Vm.RepairCommand}" MinHeight="44" Padding="20,10" Background="{StaticResource RlAccent}" Foreground="{StaticResource RlOnAccent}" FontWeight="Bold" CornerRadius="14" />
+          <Button Content="Set up helper" Command="{x:Bind Vm.RepairCommand}" MinHeight="44" Padding="20,10" Background="{StaticResource RlAccent}" Foreground="{StaticResource RlOnAccent}" FontWeight="Bold" CornerRadius="14" />
           <Button Content="Try again" Command="{x:Bind Vm.RetryCommand}" MinHeight="44" Padding="20,10" CornerRadius="14" />
         </StackPanel>
       </StackPanel>

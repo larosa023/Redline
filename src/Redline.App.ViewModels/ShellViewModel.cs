@@ -56,6 +56,14 @@ public sealed class ShellViewModel : ObservableObject
 
     public HelperState? State { get => _state; private set { if (SetProperty(ref _state, value)) OnStateChanged(); } }
     public bool HelperMissing { get => _helperMissing; private set => SetProperty(ref _helperMissing, value); }
+
+    /// <summary>The app's own version; the helper should match it.</summary>
+    public string AppVersion { get; init; } = typeof(ShellViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+
+    /// <summary>The installed helper is from a different version: it needs the one-prompt setup again.</summary>
+    public bool HelperOutdated => State is { } s && !string.Equals(Norm(s.HelperVersion), Norm(AppVersion), StringComparison.OrdinalIgnoreCase);
+
+    static string Norm(string v) => v.Split('+')[0];
     public string? LastError { get => _lastError; set => SetProperty(ref _lastError, value); }
     public string Theme { get => _theme; set => SetProperty(ref _theme, value); }
 
@@ -118,6 +126,7 @@ public sealed class ShellViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(Device));
         OnPropertyChanged(nameof(Status));
+        OnPropertyChanged(nameof(HelperOutdated));
         if (State is { } s) Theme = s.Settings.Theme;
         Home.OnState();
         Tune.OnState();
