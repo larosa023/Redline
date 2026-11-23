@@ -22,8 +22,8 @@ public static class Composition
             ? [new SimGpuBackend(new SimGpuDevice(new SimGpuSpec("Redline Demo GPU", DemoCaps(), 180, 1100, -60, 1000, 350), "demo-0"))]
             : [new NvidiaBackend(new NvmlApi())];
         var cpu = new LhmCpuMonitor(); owned.Add(cpu);
-        IProcessWatcher procs = TryCreate(() => new WmiProcessWatcher(), owned) ?? new NoProcesses();
-        IStabilitySignals signals = TryCreate(() => new EventLogStabilitySignals(), owned) ?? new NoSignals();
+        IProcessWatcher procs = (IProcessWatcher?)TryCreate(() => new WmiProcessWatcher(), owned) ?? new NoProcesses();
+        IStabilitySignals signals = (IStabilitySignals?)TryCreate(() => new EventLogStabilitySignals(), owned) ?? new NoSignals();
         return new Engine.Engine(new EngineOptions(dataDir, HelperVersion: Version), backends,
             new D3D11StressRunner(new GoldenStore(dataDir), forceWarp: demo), new PowrProfPowerPlan(), cpu, procs, signals,
             TimeProvider.System, PawnIoDetector.IsInstalled);
