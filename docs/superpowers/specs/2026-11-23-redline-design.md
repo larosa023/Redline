@@ -253,6 +253,11 @@ powers the before/after check (scored by work done per second).
     to the helper over a local named pipe (current user only).
   - The helper validates every request itself; the UI cannot bypass a
     safety rule.
+  - **Security:** the helper runs as SYSTEM, so it and anything it runs
+    (PresentMon, ADLX binding) live only in an admin-protected folder
+    (`%ProgramFiles%\Redline\Helper\<version>`), never in the
+    user-writable app folder. App-only updates need no prompt; an update
+    that changes the helper needs one admin prompt.
 - **Per-game profiles:** watch process starts/stops; match on executable
   name chosen by the user from a list of running/installed games.
 - **Settings & profiles** stored as JSON in `%AppData%\Redline`.
