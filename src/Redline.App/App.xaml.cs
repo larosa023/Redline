@@ -13,9 +13,6 @@ public partial class App : Application
         CrashLog.Write("app ctor", null, show: false);
         InitializeComponent();
         CrashLog.Write("app InitializeComponent done", null, show: false);
-        try { ThemeBrushes.Register(Resources); }
-        catch (Exception e) { CrashLog.Write("brushes", e, show: true); throw; }
-        CrashLog.Write("brushes registered", null, show: false);
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
@@ -23,6 +20,8 @@ public partial class App : Application
         try
         {
             CrashLog.Write("OnLaunched", null, show: false);
+            ThemeBrushes.Register(Resources);   // Application.Resources isn't available in the constructor
+            CrashLog.Write("brushes registered", null, show: false);
             var demo = Environment.GetCommandLineArgs().Contains("--demo");
             _window = new MainWindow(demo);
             _window.Activate();
