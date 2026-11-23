@@ -1,0 +1,5 @@
+{
+  "Nvidia": { "minVersion": "555.85", "knownBad": [] },
+  "Amd": { "minVersion": "22.7.1", "knownBad": [] },
+  "Intel": { "minVersion": "31.0.101.5000", "knownBad": [] }
+}
