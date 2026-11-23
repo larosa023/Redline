@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <IsTestProject>true</IsTestProject>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Redline.Stress/Redline.Stress.csproj" />
+    <Compile Include="../Redline.Core.Tests/Fakes/TempDir.cs" LinkBase="Fakes" />
+    <Compile Include="../Redline.Core.Tests/Fakes/TestGpus.cs" LinkBase="Fakes" />
+  </ItemGroup>
+</Project>

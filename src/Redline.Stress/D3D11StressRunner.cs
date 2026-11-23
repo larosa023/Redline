@@ -1,0 +1,136 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using Redline.Core.AutoTune;
+using Redline.Core.Gpu;
+using Redline.Core.Stress;
+using SharpGen.Runtime;
+using Vortice.D3DCompiler;
+using Vortice.Direct3D;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
+
+namespace Redline.Stress;
+
+/// <summary>
+/// GPU stress test: a deterministic integer compute shader fills a large buffer (core load), then re-reads and
+/// verifies it (memory load). Any checksum or verify mismatch is a hardware error. Device removal = driver reset.
+/// </summary>
+[SupportedOSPlatform("windows")]
+public sealed class D3D11StressRunner(GoldenStore golden, uint? elements = null, uint iterations = 32, bool forceWarp = false) : IStressRunner
+{
+    const int GroupSize = 256, GroupsX = 4096;
+    static readonly uint[] Seeds = [7919u, 15838u, 23757u, 31676u];
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct Params { public uint Seed, Iter, N, RowWidth; }
+
+    public Task<StressResult> RunAsync(IGpuDevice d, TimeSpan duration, CancellationToken ct) =>
+        Task.Factory.StartNew(() => Run(d, duration, ct), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+    StressResult Run(IGpuDevice d, TimeSpan duration, CancellationToken ct)
+    {
+        using var factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
+        using var adapter = forceWarp || d.Vendor == Vendor.Simulated ? null : PickAdapter(factory, d.Name);
+        var levels = new[] { FeatureLevel.Level_11_0 };
+        var hr = adapter is null
+            ? D3D11.D3D11CreateDevice(null, DriverType.Warp, DeviceCreationFlags.None, levels, out var device)
+            : D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.None, levels, out device);
+        if (hr.Failure || device is null) return new StressResult(false, 0, 0, false, 0, 0);
+        using var _ = device;
+        var ctx = device.ImmediateContext;
+
+        var n = elements ?? ChooseElements(adapter);
+        var source = LoadShader();
+        using var csCompute = device.CreateComputeShader(Compiler.Compile(source, "Compute", "stress.hlsl", "cs_5_0").Span);
+        using var csVerify = device.CreateComputeShader(Compiler.Compile(source, "Verify", "stress.hlsl", "cs_5_0").Span);
+        using var csReset = device.CreateComputeShader(Compiler.Compile(source, "Reset", "stress.hlsl", "cs_5_0").Span);
+
+        using var data = device.CreateBuffer(new BufferDescription((int)(n * 4), BindFlags.UnorderedAccess, ResourceUsage.Default,
+            CpuAccessFlags.None, ResourceOptionFlags.BufferStructured, 4));
+        using var result = device.CreateBuffer(new BufferDescription(8, BindFlags.UnorderedAccess, ResourceUsage.Default,
+            CpuAccessFlags.None, ResourceOptionFlags.BufferStructured, 4));
+        using var staging = device.CreateBuffer(new BufferDescription(8, BindFlags.None, ResourceUsage.Staging, CpuAccessFlags.Read));
+        using var cb = device.CreateBuffer(new BufferDescription(16, BindFlags.ConstantBuffer, ResourceUsage.Dynamic, CpuAccessFlags.Write));
+        using var dataUav = device.CreateUnorderedAccessView(data, new UnorderedAccessViewDescription(data, Format.Unknown, 0, (int)n));
+        using var resUav = device.CreateUnorderedAccessView(result, new UnorderedAccessViewDescription(result, Format.Unknown, 0, 2));
+
+        var rowWidth = (uint)(GroupsX * GroupSize);
+        var groupsY = (int)((n + rowWidth - 1) / rowWidth);
+        var groupsX = n < rowWidth ? (int)((n + GroupSize - 1) / GroupSize) : GroupsX;
+        var expected = Seeds.Select(s => golden.Get(s, iterations, n)).ToArray();
+
+        long errors = 0, rounds = 0;
+        double powerSum = 0, maxTemp = 0; var samples = 0;
+        var sw = Stopwatch.StartNew();
+        var nextSample = TimeSpan.Zero;
+        try
+        {
+            ctx.CSSetUnorderedAccessView(0, dataUav);
+            ctx.CSSetUnorderedAccessView(1, resUav);
+            ctx.CSSetConstantBuffer(0, cb);
+            while (sw.Elapsed < duration && !ct.IsCancellationRequested)
+            {
+                var seed = Seeds[rounds % Seeds.Length];
+                var p = new Params { Seed = seed, Iter = iterations, N = n, RowWidth = rowWidth };
+                var m = ctx.Map(cb, 0, MapMode.WriteDiscard);
+                Marshal.StructureToPtr(p, m.DataPointer, false);
+                ctx.Unmap(cb, 0);
+
+                ctx.CSSetShader(csReset); ctx.Dispatch(1, 1, 1);
+                ctx.CSSetShader(csCompute); ctx.Dispatch(groupsX, groupsY, 1);
+                ctx.CSSetShader(csVerify); ctx.Dispatch(groupsX, groupsY, 1);
+                ctx.CopyResource(staging, result);
+                var r = ctx.Map(staging, 0, MapMode.Read);
+                var checksum = (uint)Marshal.ReadInt32(r.DataPointer);
+                var verifyErrors = (uint)Marshal.ReadInt32(r.DataPointer, 4);
+                ctx.Unmap(staging, 0);
+
+                if (checksum != expected[rounds % Seeds.Length]) errors++;
+                errors += verifyErrors;
+                rounds++;
+
+                if (sw.Elapsed >= nextSample)
+                {
+                    nextSample = sw.Elapsed + TimeSpan.FromSeconds(1);
+                    if (d.ReadTelemetry() is { } t) { powerSum += t.PowerW; maxTemp = Math.Max(maxTemp, t.TempC); samples++; }
+                }
+            }
+        }
+        catch (SharpGenException e) when (IsDeviceLost(e.ResultCode) || device.DeviceRemovedReason.Failure)
+        {
+            return new StressResult(false, errors, 0, true, samples > 0 ? powerSum / samples : 0, maxTemp);
+        }
+        var secs = Math.Max(0.001, sw.Elapsed.TotalSeconds);
+        return new StressResult(!ct.IsCancellationRequested, errors, rounds * (double)n / 1e6 / secs, false,
+            samples > 0 ? powerSum / samples : 0, maxTemp);
+    }
+
+    static bool IsDeviceLost(Result r) =>
+        r.Code == unchecked((int)0x887A0005) || r.Code == unchecked((int)0x887A0007) || r.Code == unchecked((int)0x887A0006);
+
+    static IDXGIAdapter1? PickAdapter(IDXGIFactory1 f, string name)
+    {
+        var all = new List<IDXGIAdapter1>();
+        for (uint i = 0; f.EnumAdapters1(i, out var a).Success; i++) all.Add(a);
+        var best = all.FirstOrDefault(a => name.Contains(a.Description1.Description.Trim(), StringComparison.OrdinalIgnoreCase)
+                                           || a.Description1.Description.Contains(name, StringComparison.OrdinalIgnoreCase))
+                   ?? all.Where(a => (a.Description1.Flags & AdapterFlags.Software) == 0).OrderByDescending(a => a.Description1.DedicatedVideoMemory).FirstOrDefault();
+        foreach (var a in all) if (a != best) a.Dispose();
+        return best;
+    }
+
+    static uint ChooseElements(IDXGIAdapter1? a)
+    {
+        const uint max = 64u * 1024 * 1024;                 // 256 MB of uints
+        if (a is null) return 1u << 20;
+        var vram = (ulong)a.Description1.DedicatedVideoMemory;
+        return (uint)Math.Clamp(vram / 2 / 4 / 4, 1u << 20, max);   // ≤ 1/8 of VRAM
+    }
+
+    static string LoadShader()
+    {
+        using var s = typeof(D3D11StressRunner).Assembly.GetManifestResourceStream("Redline.Stress.stress.hlsl")!;
+        return new StreamReader(s).ReadToEnd();
+    }
+}
