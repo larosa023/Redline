@@ -228,9 +228,9 @@ powers the before/after check (scored by work done per second).
 - **GitHub Actions (Windows runner)** builds, runs tests, packages, and
   publishes a release when a version tag is pushed. Claude runs the whole
   release process; Anthony never has to do git/release steps by hand.
-- Code signing: **not at launch** (see §9). Unsigned builds will show
-  Windows' "unknown publisher" warning; signing can be added later in CI
-  without code changes.
+- **No code signing** (Anthony's decision). Builds are unsigned, so
+  Windows SmartScreen shows an "unknown publisher" warning on first
+  install; the README and download page explain how to proceed.
 
 ### 6.9 Visual design
 
@@ -263,27 +263,23 @@ powers the before/after check (scored by work done per second).
 
 ## 9. Calls made by Claude (Anthony to check)
 
-1. **Code signing deferred to after launch.** Asked, not yet answered;
-   nothing in the build blocks adding it later.
-2. **Chip quality score** compares against the card's own rated specs
+1. **Chip quality score** compares against the card's own rated specs
    (bundled reference data), not against other users. A community
    comparison would need a server and break the privacy goal.
-3. **Profile sharing** is copy/paste codes only, no website or server.
-4. **Overlay** is the non-injecting kind. Exclusive-fullscreen games may
+2. **Profile sharing** is copy/paste codes only, no website or server.
+3. **Overlay** is the non-injecting kind. Exclusive-fullscreen games may
    not show it; this avoids anti-cheat bans.
-5. **PawnIO** is offered as an optional install for CPU temperatures,
+4. **PawnIO** is offered as an optional install for CPU temperatures,
    rather than bundling any driver.
-6. **The app runs as administrator**, with a scheduled task for startup.
-7. **WinUI 3** for the UI framework.
-8. **Simulated GPU / demo mode** included so the app can be developed and
+5. **The app runs as administrator**, with a scheduled task for startup.
+6. **WinUI 3** for the UI framework.
+7. **Simulated GPU / demo mode** included so the app can be developed and
    shown without special hardware.
 
-## 10. Open questions for Anthony
+## 10. Decisions by Anthony
 
-1. **Code signing:** now or later? (Default: later.)
-2. **License:** the repo is public. Open source (e.g. MIT: anyone may
-   reuse the code) or "all rights reserved" (people can see the code but
-   not reuse it)? (Default: all rights reserved until decided.)
+1. **No code signing**, now or later.
+2. **Open source** under the MIT license.
 
 ## 11. Left to the builder
 
