@@ -70,9 +70,38 @@ public sealed class AutoTuner(IGpuDevice device, IStressRunner stress, SafeStart
         return state;
     }
 
-    // Implemented in Task 11.
-    Task<WalkState> EfficiencyAsync(Run run, Capabilities caps, StressResult baseline, CancellationToken ct) =>
-        throw new NotSupportedException("Efficiency mode not implemented yet.");
+    /// <summary>Lower power, then voltage, while staying stable and within the performance tolerance of stock. Never raises anything.</summary>
+    async Task<WalkState> EfficiencyAsync(Run run, Capabilities caps, StressResult baseline, CancellationToken ct)
+    {
+        var o = run.O;
+        var minScore = baseline.Score * (1 - o.EfficiencyTolerance);
+        var st = new WalkState(TuneSettings.Factory);
+        st = await WalkDownAsync(run, st, caps, Control.PowerLimit, 100, o.PowerStepPct, minScore, v => $"Power limit {v}%", ct);
+        st = await WalkDownAsync(run, st, caps, Control.VoltageOffset, 0, o.VoltageStepMv, minScore, v => $"Voltage {v} mV", ct);
+        return st;
+    }
+
+    async Task<WalkState> WalkDownAsync(Run run, WalkState st, Capabilities caps, Control c, int start, int step, double minScore,
+        Func<int, string> label, CancellationToken ct)
+    {
+        if (caps.Range(c) is not { } driver) return st;
+        step = Math.Max(step, driver.Step);
+        int? lastPass = null;
+        run.Walking = (c, -step, 1);
+        for (var v = start - step; v >= driver.Min; v -= step)
+        {
+            var s = st.Settings.With(c, v);
+            var r = await TestAsync(run, label(v), s, run.O.Step, ct);
+            if (!r.Stable || r.Score < minScore) break;
+            lastPass = v;
+        }
+        run.Walking = null;
+        if (lastPass is null) return st;
+        var result = Math.Min(start, lastPass.Value + step);      // one step back toward stock as safety margin
+        var settings = st.Settings.With(c, result == start ? null : result);
+        run.LastGood = settings;
+        return new WalkState(settings) { Steps = new Dictionary<Control, int>(st.Steps) { [c] = step } };
+    }
 
     sealed record WalkState(TuneSettings Settings)
     {
@@ -143,8 +172,9 @@ public sealed class AutoTuner(IGpuDevice device, IStressRunner stress, SafeStart
         var best = run.LastGood;
         if (run.Walking is { } w && best.Get(w.Control) is { } v)
         {
-            var nv = Math.Max(0, v - w.MarginSteps * w.Step);
-            best = best.With(w.Control, nv == 0 ? null : nv);
+            var nv = v - w.MarginSteps * w.Step;                          // toward stock: offsets down, power/voltage up
+            var atStock = w.Control switch { Control.PowerLimit => nv >= 100, Control.VoltageOffset => nv >= 0, _ => nv <= 0 };
+            best = best.With(w.Control, atStock ? null : nv);
         }
         await ApplyAsync(best, "auto-tune cancelled", CancellationToken.None, confirm: true);
         var b = baseline;
