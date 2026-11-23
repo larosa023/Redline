@@ -33,6 +33,14 @@ jobs:
           $p = Start-Process -FilePath smoke/Redline.exe -ArgumentList "--demo" -PassThru
           Start-Sleep -Seconds 25
           $alive = -not $p.HasExited
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size); $g.Dispose()
+          $small = New-Object System.Drawing.Bitmap $bmp, 1280, ([int]($b.Height * 1280 / $b.Width)); $bmp.Dispose()
+          $ms = New-Object System.IO.MemoryStream; $small.Save($ms, [System.Drawing.Imaging.ImageFormat]::Jpeg); $small.Dispose()
+          $b64 = [Convert]::ToBase64String($ms.ToArray())
+          Write-Host "SCREENSHOT-BEGIN"; for ($i = 0; $i -lt $b64.Length; $i += 4000) { Write-Host ("SS:" + $b64.Substring($i, [Math]::Min(4000, $b64.Length - $i))) }; Write-Host "SCREENSHOT-END"
           Write-Host "App alive after 25s: $alive"
           $logs = Join-Path $env:LOCALAPPDATA "Redline\logs"
           if (Test-Path $logs) { Get-ChildItem $logs | ForEach-Object { Write-Host "== $($_.Name)"; Get-Content $_.FullName } }
