@@ -22,6 +22,24 @@ jobs:
         run: dotnet build Redline.sln -c Release --no-restore
       - name: Test
         run: dotnet test Redline.sln -c Release --no-build --logger trx --results-directory TestResults
+      - name: Smoke test - launch the real app (demo mode)
+        shell: pwsh
+        run: |
+          dotnet publish src/Redline.App/Redline.App.csproj -c Release -r win-x64 --self-contained -p:Platform=x64 -o smoke
+          dotnet publish src/Redline.Helper/Redline.Helper.csproj -c Release -r win-x64 --self-contained -o smoke/helper
+          $env:REDLINE_SMOKE = "1"
+          $p = Start-Process -FilePath smoke/Redline.exe -ArgumentList "--demo" -PassThru
+          Start-Sleep -Seconds 25
+          $alive = -not $p.HasExited
+          Write-Host "App alive after 25s: $alive"
+          $logs = Join-Path $env:LOCALAPPDATA "Redline\logs"
+          if (Test-Path $logs) { Get-ChildItem $logs | ForEach-Object { Write-Host "== $($_.Name)"; Get-Content $_.FullName } }
+          Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=(Get-Date).AddMinutes(-2)} -ErrorAction SilentlyContinue |
+            Where-Object { $_.ProviderName -in '.NET Runtime','Application Error','Windows Error Reporting' } |
+            ForEach-Object { Write-Host "== EVENT $($_.ProviderName) $($_.Id)"; Write-Host $_.Message }
+          if ($alive) { Stop-Process -Id $p.Id -Force }
+          Get-Process Redline.Helper -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $alive) { throw "Redline.exe exited during startup (exit code $($p.ExitCode))" }
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4

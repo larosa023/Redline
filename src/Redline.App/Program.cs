@@ -10,17 +10,27 @@ public static class Program
     [STAThread]
     static void Main(string[] args)
     {
-        VelopackApp.Build()
-            .OnBeforeUninstallFastCallback(_ => UninstallHelper())
-            .Run();
-
-        WinRT.ComWrappersSupport.InitializeComWrappers();
-        Application.Start(p =>
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => CrashLog.Write("unhandled", e.ExceptionObject as Exception, show: true);
+        TaskScheduler.UnobservedTaskException += (_, e) => { CrashLog.Write("unobserved task", e.Exception, show: false); e.SetObserved(); };
+        try
         {
-            var ctx = new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread());
-            SynchronizationContext.SetSynchronizationContext(ctx);
-            _ = new App();
-        });
+            VelopackApp.Build()
+                .OnBeforeUninstallFastCallback(_ => UninstallHelper())
+                .Run();
+
+            WinRT.ComWrappersSupport.InitializeComWrappers();
+            Application.Start(p =>
+            {
+                var ctx = new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread());
+                SynchronizationContext.SetSynchronizationContext(ctx);
+                _ = new App();
+            });
+        }
+        catch (Exception e)
+        {
+            CrashLog.Write("startup", e, show: true);
+            Environment.Exit(1);
+        }
     }
 
     /// <summary>Removes the helper service when Redline is uninstalled (one admin prompt). Settings in ProgramData are kept.</summary>
