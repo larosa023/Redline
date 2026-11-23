@@ -19,7 +19,7 @@ namespace Redline.Stress;
 [SupportedOSPlatform("windows")]
 public sealed class D3D11StressRunner(GoldenStore golden, uint? elements = null, uint iterations = 32, bool forceWarp = false) : IStressRunner
 {
-    const int GroupSize = 256, GroupsX = 4096;
+    const uint GroupSize = 256, GroupsX = 4096;
     static readonly uint[] Seeds = [7919u, 15838u, 23757u, 31676u];
 
     [StructLayout(LayoutKind.Sequential)]
@@ -46,18 +46,18 @@ public sealed class D3D11StressRunner(GoldenStore golden, uint? elements = null,
         using var csVerify = device.CreateComputeShader(Compiler.Compile(source, "Verify", "stress.hlsl", "cs_5_0").Span);
         using var csReset = device.CreateComputeShader(Compiler.Compile(source, "Reset", "stress.hlsl", "cs_5_0").Span);
 
-        using var data = device.CreateBuffer(new BufferDescription((int)(n * 4), BindFlags.UnorderedAccess, ResourceUsage.Default,
+        using var data = device.CreateBuffer(new BufferDescription(n * 4, BindFlags.UnorderedAccess, ResourceUsage.Default,
             CpuAccessFlags.None, ResourceOptionFlags.BufferStructured, 4));
         using var result = device.CreateBuffer(new BufferDescription(8, BindFlags.UnorderedAccess, ResourceUsage.Default,
             CpuAccessFlags.None, ResourceOptionFlags.BufferStructured, 4));
         using var staging = device.CreateBuffer(new BufferDescription(8, BindFlags.None, ResourceUsage.Staging, CpuAccessFlags.Read));
         using var cb = device.CreateBuffer(new BufferDescription(16, BindFlags.ConstantBuffer, ResourceUsage.Dynamic, CpuAccessFlags.Write));
-        using var dataUav = device.CreateUnorderedAccessView(data, new UnorderedAccessViewDescription(data, Format.Unknown, 0, (int)n));
-        using var resUav = device.CreateUnorderedAccessView(result, new UnorderedAccessViewDescription(result, Format.Unknown, 0, 2));
+        using var dataUav = device.CreateUnorderedAccessView(data, new UnorderedAccessViewDescription(data, Format.Unknown, 0u, n));
+        using var resUav = device.CreateUnorderedAccessView(result, new UnorderedAccessViewDescription(result, Format.Unknown, 0u, 2u));
 
-        var rowWidth = (uint)(GroupsX * GroupSize);
-        var groupsY = (int)((n + rowWidth - 1) / rowWidth);
-        var groupsX = n < rowWidth ? (int)((n + GroupSize - 1) / GroupSize) : GroupsX;
+        var rowWidth = GroupsX * GroupSize;
+        var groupsY = (n + rowWidth - 1) / rowWidth;
+        var groupsX = n < rowWidth ? (n + GroupSize - 1) / GroupSize : GroupsX;
         var expected = Seeds.Select(s => golden.Get(s, iterations, n)).ToArray();
 
         long errors = 0, rounds = 0;

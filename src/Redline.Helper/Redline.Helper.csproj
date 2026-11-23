@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <RootNamespace>Redline.Helper</RootNamespace>
+    <AssemblyName>Redline.Helper</AssemblyName>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Redline.Engine/Redline.Engine.csproj" />
+    <ProjectReference Include="../Redline.Platform.Windows/Redline.Platform.Windows.csproj" />
+    <ProjectReference Include="../Redline.Hardware.Nvidia/Redline.Hardware.Nvidia.csproj" />
+    <ProjectReference Include="../Redline.Stress/Redline.Stress.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Redline.Helper.Tests" />
+  </ItemGroup>
+</Project>
