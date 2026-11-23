@@ -86,18 +86,30 @@ and safety nets so a bad setting can't leave someone stuck.
         highest passing step (not the edge of stability).
       - **Hard temperature ceiling:** the temperature guard has a
         default limit and cannot be disabled while a tune is applied.
-20. **"Send report" button:** bundles logs and hardware info into one file
+20. **CPU boost control (safe):** each profile can set Windows' own
+    processor power settings (boost mode, maximum processor state) via
+    the official power-plan APIs, e.g. Whisper caps boost for a cooler,
+    quieter CPU; Send it allows full boost. No drivers; switching
+    profile or Factory restores the previous Windows values. Works on
+    any Intel or AMD CPU.
+21. **Guided BIOS tuning page:** detects the CPU and shows a plain-
+    language walkthrough of the right BIOS settings for that platform
+    (e.g. PBO / Curve Optimizer on Ryzen, power limits on Intel).
+    Redline never changes these itself; it monitors and stress-tests
+    the result afterward (CPU stress test added to the stress engine).
+22. **"Send report" button:** bundles logs and hardware info into one file
     for bug reports (user sends it themselves).
-21. **Privacy:** nothing leaves the PC except the update check. No
+23. **Privacy:** nothing leaves the PC except the update check. No
     accounts, no analytics.
-22. **Lightweight:** near-zero CPU use when minimized; must not hurt game
+24. **Lightweight:** near-zero CPU use when minimized; must not hurt game
     performance.
 
 ## 3. Non-goals
 
-- **CPU tuning** (PBO, Curve Optimizer, Intel undervolting). Requires
-  low-level kernel drivers that antivirus flags and that can crash
-  strangers' systems. CPU is monitoring only.
+- **Low-level CPU tuning** (voltages, PBO, Curve Optimizer, Intel
+  undervolting) from inside Windows. Requires low-level drivers that
+  antivirus flags and that can crash strangers' systems. CPU tuning is
+  limited to Windows' own boost settings plus the BIOS guide.
 - **RAM tuning.** On modern platforms this is BIOS-only.
 - **macOS / Linux.** Windows 10/11 x64 only.
 - **Integration with Hangar.** Redline is standalone.
