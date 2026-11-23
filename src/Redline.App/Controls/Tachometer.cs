@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Shapes;
 using Redline.App.Theming;
 using Windows.Foundation;
+using Path = Microsoft.UI.Xaml.Shapes.Path;
 
 namespace Redline.App.Controls;
 
