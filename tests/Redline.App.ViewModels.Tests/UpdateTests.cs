@@ -60,6 +60,25 @@ public class UpdateTests
     }
 
     [Fact]
+    public async Task PrereleaseVersions_SameBuild_NoPrompt()
+    {
+        var h = new FakeHelper();
+        h.State = h.State with { HelperVersion = "0.9.0-beta.2" };
+        var s = new ShellViewModel(h, FakeHelper.Inline) { AppVersion = "0.9.0-beta.2+887db3f" };
+        await s.LoadAsync();
+        Assert.False(s.HelperOutdated);
+    }
+
+    [Fact]
+    public void DefaultAppVersion_UsesInformationalVersion()
+    {
+        var info = typeof(ShellViewModel).Assembly
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().Single().InformationalVersion.Split('+')[0];
+        Assert.Equal(info, new ShellViewModel(new FakeHelper(), FakeHelper.Inline).AppVersion);
+    }
+
+    [Fact]
     public async Task HelperVersionMatch_NoPrompt()
     {
         var s = new ShellViewModel(new FakeHelper(), FakeHelper.Inline) { AppVersion = "1.0.0" };

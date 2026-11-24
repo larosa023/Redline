@@ -18,7 +18,6 @@ public sealed class Tachometer : Canvas
     readonly Line _needle = new() { StrokeThickness = 4, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round };
     readonly Ellipse _hub = new() { Width = 18, Height = 18 }, _hubInner = new() { Width = 8, Height = 8 };
     readonly TextBlock _redLabel = new() { Text = "RED", FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.Bold, CharacterSpacing = 100 };
-    readonly RotateTransform _sway = new() { CenterX = Cx, CenterY = Cy };
     double _fraction, _redFrom = 0.85;
 
     public Tachometer()
@@ -31,20 +30,10 @@ public sealed class Tachometer : Canvas
         Children.Add(_needle); Children.Add(_hub); Children.Add(_hubInner);
         SetLeft(_hub, Cx - 9); SetTop(_hub, Cy - 9); SetLeft(_hubInner, Cx - 4); SetTop(_hubInner, Cy - 4);
         var p = Point(0.93, R + 30); SetLeft(_redLabel, p.X - 4); SetTop(_redLabel, p.Y - 8);
-        _needle.RenderTransform = _sway;
         AutomationProperties.SetName(this, "Tachometer");
         ThemeBrushes.Changed += Recolor;
         Recolor();
-        Loaded += (_, _) => StartSway();
         Update(0, 0.85);
-    }
-
-    void StartSway()
-    {
-        if (!new Windows.UI.ViewManagement.UISettings().AnimationsEnabled) return;
-        var a = new DoubleAnimation { From = -1.5, To = 1.5, Duration = TimeSpan.FromSeconds(1.2), AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase() };
-        Storyboard.SetTarget(a, _sway); Storyboard.SetTargetProperty(a, "Angle");
-        var sb = new Storyboard(); sb.Children.Add(a); sb.Begin();
     }
 
     void Recolor()

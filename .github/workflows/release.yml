@@ -29,9 +29,9 @@ jobs:
       - name: Test
         run: dotnet test Redline.sln -c Release
       - name: Publish app
-        run: dotnet publish src/Redline.App/Redline.App.csproj -c Release -r win-x64 --self-contained -p:Version=${{ steps.v.outputs.version }} -p:Platform=x64 -o publish
+        run: dotnet publish src/Redline.App/Redline.App.csproj -c Release -r win-x64 --self-contained -p:Version=${{ steps.v.outputs.version }} -p:Platform=x64 -p:PublishReadyToRun=true -o publish
       - name: Publish helper
-        run: dotnet publish src/Redline.Helper/Redline.Helper.csproj -c Release -r win-x64 --self-contained -p:Version=${{ steps.v.outputs.version }} -o publish/helper
+        run: dotnet publish src/Redline.Helper/Redline.Helper.csproj -c Release -r win-x64 --self-contained -p:Version=${{ steps.v.outputs.version }} -p:PublishReadyToRun=true -o publish/helper
       - name: Licenses
         shell: bash
         run: cp LICENSE THIRD-PARTY-NOTICES.md publish/

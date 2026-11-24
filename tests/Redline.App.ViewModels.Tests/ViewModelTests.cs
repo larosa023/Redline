@@ -101,7 +101,7 @@ public class ViewModelTests
 
     [Fact]
     public async Task Status_CustomText() =>
-        Assert.Equal("Custom tune is active", (await Shell(new FakeHelper(activeProfile: null, active: TuneSettings.Factory with { CoreOffsetMhz = 15 }))).Status);
+        Assert.Equal("Custom tune is active · Core +15 MHz", (await Shell(new FakeHelper(activeProfile: null, active: TuneSettings.Factory with { CoreOffsetMhz = 15 }))).Status);
 
     [Fact]
     public async Task HelperMissing_ShowsRepair()

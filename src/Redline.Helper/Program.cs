@@ -24,37 +24,73 @@ return 0;
 static class Installer
 {
     /// <summary>Copies the helper into an admin-protected folder and (re)registers the service. Requires elevation.</summary>
+    static string LogPath => Path.Combine(InstallLayout.DataDir, "install.log");
+
+    static void Log(string msg)
+    {
+        try { Directory.CreateDirectory(InstallLayout.DataDir); File.AppendAllText(LogPath, $"[{DateTime.Now:O}] {msg}\n"); } catch (Exception) { }
+    }
+
+    /// <summary>Copies the helper into an admin-protected folder and (re)registers the service. Requires elevation.</summary>
     public static int Install(string sourceDir)
     {
-        var version = Composition.Version;
-        var target = InstallLayout.HelperDir(version);
-        Directory.CreateDirectory(target);
-        foreach (var f in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+        try
         {
-            var rel = Path.GetRelativePath(sourceDir, f);
-            var dst = Path.Combine(target, rel);
-            Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
-            File.Copy(f, dst, overwrite: true);
-        }
-        new DirectoryInfo(Path.GetDirectoryName(target)!).SetAccessControl(InstallLayout.ProtectedFolder());
-        new DirectoryInfo(target).SetAccessControl(InstallLayout.ProtectedFolder());
-        Directory.CreateDirectory(InstallLayout.DataDir);
-        new DirectoryInfo(InstallLayout.DataDir).SetAccessControl(InstallLayout.DataFolder());
+            var version = Composition.Version;
+            var target = InstallLayout.HelperDir(version);
+            Log($"install {version} from {sourceDir} to {target}");
+            StopService();
+            if (!string.Equals(Path.GetFullPath(sourceDir).TrimEnd('\\'), Path.GetFullPath(target).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+            {
+                Directory.CreateDirectory(target);
+                foreach (var f in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+                {
+                    var dst = Path.Combine(target, Path.GetRelativePath(sourceDir, f));
+                    Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
+                    File.Copy(f, dst, overwrite: true);
+                }
+            }
+            new DirectoryInfo(Path.GetDirectoryName(target)!).SetAccessControl(InstallLayout.ProtectedFolder());
+            new DirectoryInfo(target).SetAccessControl(InstallLayout.ProtectedFolder());
+            Directory.CreateDirectory(InstallLayout.DataDir);
+            new DirectoryInfo(InstallLayout.DataDir).SetAccessControl(InstallLayout.DataFolder());
 
-        var exe = Path.Combine(target, "Redline.Helper.exe");
-        Sc("stop", InstallLayout.ServiceName);
-        var exists = Sc("query", InstallLayout.ServiceName) == 0;
-        var bin = $"binPath= \"\\\"{exe}\\\"\"";
-        var r = exists
-            ? Sc("config", $"{InstallLayout.ServiceName} {bin} start= auto")
-            : Sc("create", $"{InstallLayout.ServiceName} {bin} start= auto DisplayName= \"Redline Helper\"");
-        if (r != 0) return r;
-        Sc("description", $"{InstallLayout.ServiceName} \"Applies Redline GPU tunes and enforces its safety rules.\"");
-        Sc("failure", $"{InstallLayout.ServiceName} reset= 86400 actions= restart/5000/restart/5000//");
-        r = Sc("start", InstallLayout.ServiceName);
-        foreach (var old in Directory.EnumerateDirectories(Path.GetDirectoryName(target)!).Where(d => !d.Equals(target, StringComparison.OrdinalIgnoreCase)))
-            try { Directory.Delete(old, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
-        return r is 0 or 1056 ? 0 : r;   // 1056 = already running
+            var exe = Path.Combine(target, "Redline.Helper.exe");
+            var exists = Sc("query", InstallLayout.ServiceName) == 0;
+            var bin = $"binPath= \"\\\"{exe}\\\"\"";
+            var r = exists
+                ? Sc("config", $"{InstallLayout.ServiceName} {bin} start= auto")
+                : Sc("create", $"{InstallLayout.ServiceName} {bin} start= auto DisplayName= \"Redline Helper\"");
+            if (r != 0) { Log($"sc create/config failed: {r}"); return r; }
+            Sc("description", $"{InstallLayout.ServiceName} \"Applies Redline GPU tunes and enforces its safety rules.\"");
+            Sc("failure", $"{InstallLayout.ServiceName} reset= 86400 actions= restart/5000/restart/5000//");
+            r = Sc("start", InstallLayout.ServiceName);
+            foreach (var old in Directory.EnumerateDirectories(Path.GetDirectoryName(target)!).Where(d => !d.Equals(target, StringComparison.OrdinalIgnoreCase)))
+                try { Directory.Delete(old, true); } catch (Exception) { }
+            Log($"done, start={r}");
+            return r is 0 or 1056 ? 0 : r;   // 1056 = already running
+        }
+        catch (Exception e)
+        {
+            Log("failed: " + e);
+            return 1;
+        }
+    }
+
+    static void StopService()
+    {
+        try
+        {
+            using var sc = new System.ServiceProcess.ServiceController(InstallLayout.ServiceName);
+            if (sc.Status != System.ServiceProcess.ServiceControllerStatus.Stopped)
+            {
+                sc.Stop();
+                sc.WaitForStatus(System.ServiceProcess.ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(20));
+            }
+            Thread.Sleep(500);   // let the process release its files
+        }
+        catch (InvalidOperationException) { /* not installed yet */ }
+        catch (System.ServiceProcess.TimeoutException) { Log("service did not stop in 20 s"); }
     }
 
     public static int Uninstall(bool purge)

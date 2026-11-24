@@ -27,7 +27,9 @@ public sealed class Sparkline : Canvas
         _line.Points.Clear();
         if (_values.Count < 2 || ActualWidth <= 0) return;
         double min = _values.Min(), max = _values.Max();
-        if (max - min < 1) { max += 0.5; min -= 0.5; }
+        // Never stretch tiny wobbles (40→41 °C) across the full height.
+        const double minSpan = 10;
+        if (max - min < minSpan) { var mid = (max + min) / 2; min = mid - minSpan / 2; max = mid + minSpan / 2; }
         for (var i = 0; i < _values.Count; i++)
             _line.Points.Add(new Point(i * ActualWidth / (_values.Count - 1), Height - 3 - (_values[i] - min) / (max - min) * (Height - 6)));
     }

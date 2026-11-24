@@ -99,16 +99,17 @@ public sealed class TuneViewModel : ObservableObject
     public bool NeedsConnectorWarning =>
         _shell.Device is { Caps.Has16PinConnector: true } && (Staged.PowerLimitPct ?? 100) > 100 && !Safety.ConnectorWarningAcknowledged;
 
-    public string ApplySummary
+    public string ApplySummary => Summary(Staged);
+
+    public static string Summary(TuneSettings s)
     {
-        get
         {
-            var s = Staged;
             var parts = new List<string>();
             if (s.PowerLimitPct is { } p) parts.Add($"Power {p}%");
             if (s.CoreOffsetMhz is { } c) parts.Add($"Core {c:+0;−0} MHz");
             if (s.MemoryOffsetMhz is { } m) parts.Add($"Memory {m:+0;−0} MHz");
             if (s.VoltageOffsetMv is { } v) parts.Add($"Voltage {v:+0;−0} mV");
+            if (s.Fan is not null) parts.Add("Custom fan curve");
             return parts.Count == 0 ? "Factory settings" : string.Join(" · ", parts);
         }
     }

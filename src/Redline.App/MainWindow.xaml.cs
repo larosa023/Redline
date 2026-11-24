@@ -49,7 +49,11 @@ public sealed partial class MainWindow : Window
 
         Vm.PropertyChanged += OnVmChanged;
         Vm.Toasts.CollectionChanged += (_, _) => RenderToasts();
-        Vm.RepairRequested += async () => { if (await _launcher.RepairAsync()) await Vm.LoadAsync(); };
+        Vm.RepairRequested += async () =>
+        {
+            if (await _launcher.RepairAsync()) await Vm.LoadAsync();
+            else Vm.LastError = "Helper setup didn't finish. If you saw an admin prompt, choose Yes. Details: C:\\ProgramData\\Redline\\install.log";
+        };
         ThemeBrushes.Changed += () => { Root.RequestedTheme = ThemeBrushes.ElementTheme; UpdateNav(); BuildSwatches(); };
         Root.RequestedTheme = ThemeBrushes.ElementTheme;
         Closed += async (_, _) => await _launcher.DisposeAsync();
