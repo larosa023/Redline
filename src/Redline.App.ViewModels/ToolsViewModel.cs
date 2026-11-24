@@ -22,6 +22,11 @@ public sealed class ToolsViewModel : ObservableObject
     }
 
     public AsyncRelayCommand BeforeAfterCommand { get; }
+
+    /// <summary>Why "Run check" is greyed out, when it is.</summary>
+    public string BeforeAfterHint => Selected is { Gpu.IsFactory: true }
+        ? "Pick a tuned profile above to check it. Factory has nothing to compare."
+        : "";
     public AsyncRelayCommand ImportCommand { get; }
 
     Profile? Selected => _shell.State?.Profiles.FirstOrDefault(p => p.Id == _profileId);
@@ -50,6 +55,7 @@ public sealed class ToolsViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ShareCode)); OnPropertyChanged(nameof(Score)); OnPropertyChanged(nameof(ScoreText));
         BeforeAfterCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(BeforeAfterHint));
     }
 
     async Task BeforeAfterAsync()

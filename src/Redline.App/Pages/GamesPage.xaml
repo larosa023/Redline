@@ -12,7 +12,7 @@
         <ComboBox x:Name="Running" Header="Pick a running game" PlaceholderText="Choose from apps that are open" MinWidth="320" SelectionChanged="OnRunningPicked" DropDownOpened="OnRunningOpened" />
         <Grid ColumnSpacing="12">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="200" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-          <TextBox Header="…or type its .exe name" PlaceholderText="Cyberpunk2077.exe" Text="{x:Bind Vm.Games.NewExe, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+          <TextBox Header="…or type its .exe name" PlaceholderText="e.g. Cyberpunk2077.exe" Text="{x:Bind Vm.Games.NewExe, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
           <ComboBox x:Name="ProfilePick" Grid.Column="1" Header="Use profile" HorizontalAlignment="Stretch" SelectionChanged="OnProfilePicked" DisplayMemberPath="Name" />
           <Button Grid.Column="2" Content="Add" Command="{x:Bind Vm.Games.AddCommand}" VerticalAlignment="Bottom" MinHeight="36" Padding="20,6" CornerRadius="12"
                   Background="{StaticResource RlAccent}" Foreground="{StaticResource RlOnAccent}" FontWeight="Bold" />

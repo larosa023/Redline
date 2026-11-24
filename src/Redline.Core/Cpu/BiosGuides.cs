@@ -9,7 +9,7 @@ public static class BiosGuides
 {
     static readonly string[] CommonWarnings =
     [
-        "Change one thing at a time, then test with Redline's CPU stress test and a few hours of normal use.",
+        "Change one thing at a time, then use the PC normally for a few hours (including a game you play) before changing the next.",
         "If your PC won't boot after a change, clear CMOS (see your motherboard manual) to return to defaults.",
         "Update your BIOS first; newer versions often fix stability and boost behavior.",
     ];
@@ -51,7 +51,6 @@ public static class BiosGuides
     static readonly BiosGuide Generic = new("CPU tuning — general advice",
         "Redline couldn't match your CPU to a specific guide. These steps apply to most modern desktops.",
         [
-            "Update your BIOS to the latest version.",
             "Make sure XMP/EXPO is enabled so your memory runs at its rated speed.",
             "Leave CPU voltages and multipliers at Auto unless you know your platform well.",
             "Use Redline's CPU boost settings in profiles to trade speed for quiet.",

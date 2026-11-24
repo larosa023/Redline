@@ -163,6 +163,7 @@
             <TextBlock Text="Before/after check" FontWeight="SemiBold" Foreground="{StaticResource RlText}" />
             <TextBlock Text="About two minutes: factory and this profile, back and forth. Close games first for a clean result." Foreground="{StaticResource RlMuted}" FontSize="13" TextWrapping="Wrap" />
             <Button Content="Run check" Command="{x:Bind Vm.Tools.BeforeAfterCommand}" CornerRadius="12" MinHeight="36" />
+            <TextBlock Text="{x:Bind Vm.Tools.BeforeAfterHint, Mode=OneWay}" Foreground="{StaticResource RlMuted}" FontSize="12" TextWrapping="Wrap" />
           </StackPanel>
           <StackPanel Grid.Column="1" Spacing="8">
             <TextBlock Text="Chip score" FontWeight="SemiBold" Foreground="{StaticResource RlText}" />

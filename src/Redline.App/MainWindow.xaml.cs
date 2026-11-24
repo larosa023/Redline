@@ -146,7 +146,7 @@ public sealed partial class MainWindow : Window
 
     void AddNav(string name)
     {
-        var b = new Button { Content = name, Padding = new Thickness(16, 8, 16, 8), CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(0), MinHeight = 36 };
+        var b = new Button { Content = name, Padding = new Thickness(14, 8, 14, 8), CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(0), MinHeight = 36 };
         b.Click += (_, _) => Navigate(name);
         _navButtons[name] = b;
         Nav.Children.Add(b);
@@ -170,15 +170,22 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    static LinearGradientBrush Swatch(ThemePalette t)
+    {
+        var fill = new LinearGradientBrush { StartPoint = new(0, 0), EndPoint = new(1, 1) };
+        fill.GradientStops.Add(new GradientStop { Color = ThemeBrushes.C(t.Bg), Offset = 0.5 });
+        fill.GradientStops.Add(new GradientStop { Color = ThemeBrushes.C(t.Accent), Offset = 0.5 });
+        return fill;
+    }
+
     void BuildSwatches()
     {
         Swatches.Children.Clear();
         ThemeName.Text = ThemeBrushes.Current.Name;
+        ThemeDot.Background = Swatch(ThemeBrushes.Current);
         foreach (var t in Themes.All)
         {
-            var fill = new LinearGradientBrush { StartPoint = new(0, 0), EndPoint = new(1, 1) };
-            fill.GradientStops.Add(new GradientStop { Color = ThemeBrushes.C(t.Bg), Offset = 0.5 });
-            fill.GradientStops.Add(new GradientStop { Color = ThemeBrushes.C(t.Accent), Offset = 0.5 });
+            var fill = Swatch(t);
             var b = new Button
             {
                 Width = 30, Height = 30, Padding = new Thickness(3), CornerRadius = new CornerRadius(15),

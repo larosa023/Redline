@@ -56,6 +56,9 @@ public sealed class LhmCpuMonitor : ICpuMonitor, IGpuExtraSensors, IDisposable
                 .Where(v => v > 0).ToList();
             var coreLoads = PerCore(s.Where(x => x.SensorType == SensorType.Load).Select(x => (x.Name, x.Index, x.Value)), "CPU Core #");
             var power = Val(s, SensorType.Power, "Package");
+            // A CPU at exactly 0 °C or 0 W means the sensor isn't readable (e.g. no PawnIO driver): show "—", not 0.
+            if (temp is <= 0) temp = null;
+            if (power is <= 0) power = null;
 
             double? ramUsed = null, ramTotal = null;
             var mem = _pc.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Memory);

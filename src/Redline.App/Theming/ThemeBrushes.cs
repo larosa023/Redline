@@ -18,6 +18,15 @@ public static class ThemeBrushes
     {
         r["RlBg"] = Bg; r["RlSurface"] = Surface; r["RlSurface2"] = Surface2; r["RlText"] = Text; r["RlMuted"] = Muted;
         r["RlAccent"] = Accent; r["RlOnAccent"] = OnAccent; r["RlGood"] = Good; r["RlGoodBg"] = GoodBg; r["RlLine"] = Line; r["RlTrack"] = Track;
+        // WinUI's own controls (slider, toggle, radio, checkbox, progress) use the Windows accent (usually blue).
+        // Point them at the theme's accent instead; these brushes are updated in place when the theme changes.
+        foreach (var k in new[] { "AccentFillColorDefaultBrush", "AccentFillColorSecondaryBrush", "AccentFillColorTertiaryBrush",
+                                  "SliderThumbBackground", "SliderThumbBackgroundPointerOver", "SliderThumbBackgroundPressed",
+                                  "ToggleSwitchFillOn", "ToggleSwitchFillOnPointerOver", "ToggleSwitchFillOnPressed",
+                                  "AccentAAFillColorDefaultBrush", "ProgressRingForegroundThemeBrush" })
+            r[k] = Accent;
+        foreach (var k in new[] { "TextOnAccentFillColorPrimaryBrush", "ToggleSwitchKnobFillOn", "ToggleSwitchKnobFillOnPointerOver", "ToggleSwitchKnobFillOnPressed" })
+            r[k] = OnAccent;
         Apply(Current);
     }
 

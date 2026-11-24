@@ -29,19 +29,24 @@ public sealed partial class CpuPage : UserControl
         ProfilePick.SelectedItem = Vm.Cpu.Profiles.FirstOrDefault(p => p.Id == Vm.Cpu.SelectedProfileId);
         BoostPick.SelectedIndex = Vm.Cpu.BoostMode is { } b ? (int)b + 1 : 0;
         MaxState.Value = Vm.Cpu.MaxStatePct;
+        MaxState.Header = $"Maximum CPU speed: {Vm.Cpu.MaxStatePct}%";
         _loading = false;
         BuildGuide();
     }
 
     void OnProfile(object sender, SelectionChangedEventArgs e) { if (!_loading && ProfilePick.SelectedItem is ProfileChoice p) Vm.Cpu.SelectedProfileId = p.Id; }
     void OnBoost(object sender, SelectionChangedEventArgs e) { if (!_loading) Vm.Cpu.BoostMode = BoostPick.SelectedIndex <= 0 ? null : (CpuBoostMode)(BoostPick.SelectedIndex - 1); }
-    void OnMax(object sender, RangeBaseValueChangedEventArgs e) { if (!_loading) Vm.Cpu.MaxStatePct = (int)e.NewValue; }
+    void OnMax(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        MaxState.Header = $"Maximum CPU speed: {(int)e.NewValue}%";
+        if (!_loading) Vm.Cpu.MaxStatePct = (int)e.NewValue;
+    }
 
     void BuildGuide()
     {
         var g = Vm.Cpu.Guide;
         Guide.Children.Clear();
-        Guide.Children.Add(new TextBlock { Text = "BIOS tuning guide: " + g.Title, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 16, Foreground = ThemeBrushes.Text, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap });
+        Guide.Children.Add(new TextBlock { Text = "BIOS tips · " + g.Title, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 16, Foreground = ThemeBrushes.Text, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap });
         Guide.Children.Add(new TextBlock { Text = g.Summary, Foreground = ThemeBrushes.Muted, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap });
         var i = 1;
         foreach (var s in g.Steps) Guide.Children.Add(new TextBlock { Text = $"{i++}. {s}", Foreground = ThemeBrushes.Text, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap });
