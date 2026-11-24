@@ -74,3 +74,22 @@ public class SignedFormatTests
     [InlineData(-2.6, "−3")]
     public void Signed_NeverPrintsMinusPlus(double v, string expected) => Assert.Equal(expected, Numbers.Signed(v));
 }
+
+public class HeadlineTests
+{
+    [Fact]
+    public async Task TuneOn_WithNoMeasuredGain_NeverSaysFactory()
+    {
+        var h = new FakeHelper(activeProfile: "send-it", active: new TuneSettings(null, 225, 1200, null, null));
+        h.State = h.State with
+        {
+            Profiles = h.State.Profiles.Select(p => p.Id == "send-it"
+                ? p with { Gpu = new TuneSettings(null, 225, 1200, null, null), Measured = new Redline.Core.Stats.BeforeAfter(34000, 30200, 49, 53, 273, 265, 33, 33) }
+                : p).ToList(),
+        };
+        var s = new ShellViewModel(h, FakeHelper.Inline) { Delay = HelperRecoveryTests.InstantThenNever(0) };
+        await s.LoadAsync();
+        Assert.DoesNotContain("factory settings", s.Home.Headline);
+        Assert.Contains("tune is on", s.Home.Headline, StringComparison.OrdinalIgnoreCase);
+    }
+}

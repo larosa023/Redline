@@ -39,7 +39,7 @@ public sealed class ToolsViewModel : ObservableObject
 
     public string ShareCode => Selected is { } p ? Core.Sharing.ShareCode.Encode(p, GpuName) : "";
     public ChipScoreResult? Score => Selected is { StabilityTested: true } p && p.Id != Profile.FactoryId ? ChipScore.Compute(GpuName, p.Gpu) : null;
-    public string ScoreText => Score is { } s ? $"{s.Score} / 100 · {s.Tier}" : "Run auto-tune on this profile to get a chip score.";
+    public string ScoreText => Score is { } s ? $"{s.Score} / 100 · {s.Tier} (estimate)" : "Run auto-tune on this profile to get a chip score.";
 
     public static string Words(BeforeAfter b) =>
         $"{Numbers.Signed(b.PerfChangePct)}% performance · {Numbers.Signed(b.TempChangeC)} °C · {Numbers.Signed(b.PowerChangeW)} W";

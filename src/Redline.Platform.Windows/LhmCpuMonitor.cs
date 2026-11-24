@@ -32,6 +32,15 @@ public sealed class LhmCpuMonitor : ICpuMonitor, IGpuExtraSensors, IDisposable
         names.Select(n => s.FirstOrDefault(x => x.SensorType == t && x.Name.Contains(n, StringComparison.OrdinalIgnoreCase))?.Value)
              .FirstOrDefault(v => v is not null);
 
+    /// <summary>
+    /// One value per physical core: names exactly like "Core #3" (clocks) or "CPU Core #3" (loads). LHM also reports
+    /// "Core #3 (Effective)" and "CPU Core #3 Thread #1", which would double the list.
+    /// </summary>
+    public static List<double> PerCore(IEnumerable<(string Name, int Index, float? Value)> sensors, string prefix) =>
+        sensors.Where(x => x.Value is not null && x.Name.StartsWith(prefix, StringComparison.Ordinal)
+                           && int.TryParse(x.Name.AsSpan(prefix.Length), out _))
+               .OrderBy(x => x.Index).Select(x => (double)x.Value!.Value).ToList();
+
     public CpuState? Read()
     {
         if (!Ready) return null;
@@ -43,10 +52,9 @@ public sealed class LhmCpuMonitor : ICpuMonitor, IGpuExtraSensors, IDisposable
             var s = cpu.Sensors;
             var temp = Val(s, SensorType.Temperature, "Tctl/Tdie", "Package", "Tdie", "Core Max", "Core Average");
             var load = Val(s, SensorType.Load, "CPU Total") ?? 0;
-            var coreClocks = s.Where(x => x.SensorType == SensorType.Clock && x.Name.StartsWith("Core #", StringComparison.Ordinal) && x.Value is > 0)
-                              .OrderBy(x => x.Index).Select(x => (double)x.Value!.Value).ToList();
-            var coreLoads = s.Where(x => x.SensorType == SensorType.Load && x.Name.StartsWith("CPU Core #", StringComparison.Ordinal) && x.Value is not null)
-                             .OrderBy(x => x.Index).Select(x => (double)x.Value!.Value).ToList();
+            var coreClocks = PerCore(s.Where(x => x.SensorType == SensorType.Clock).Select(x => (x.Name, x.Index, x.Value)), "Core #")
+                .Where(v => v > 0).ToList();
+            var coreLoads = PerCore(s.Where(x => x.SensorType == SensorType.Load).Select(x => (x.Name, x.Index, x.Value)), "CPU Core #");
             var power = Val(s, SensorType.Power, "Package");
 
             double? ramUsed = null, ramTotal = null;

@@ -5,22 +5,35 @@ using Redline.Core.Stats;
 
 namespace Redline.Engine;
 
-/// <summary>About a minute: 30 s at factory, 30 s with the tune, then back to what was running before.</summary>
+/// <summary>
+/// About two minutes: a short warm-up at factory (not counted), then factory and the tune twice each, alternating,
+/// so both see the same temperatures and background load. Then back to what was running before.
+/// </summary>
 public sealed class BeforeAfterRunner(IGpuDevice device, IStressRunner stress, SafeStartJournal journal)
 {
-    public static TimeSpan Each { get; set; } = TimeSpan.FromSeconds(30);
+    public static TimeSpan Each { get; set; } = TimeSpan.FromSeconds(20);
+    public static TimeSpan WarmUp { get; set; } = TimeSpan.FromSeconds(20);
+    const int Rounds = 2;
 
     public async Task<BeforeAfter> RunAsync(TuneSettings tuned, TuneSettings restoreTo, CancellationToken ct)
     {
         try
         {
-            journal.MarkPending(device.Id, TuneSettings.Factory, "before/after: stock");
-            await device.ResetAsync(ct);
-            var (stock, stockFan) = await Measure(ct);
-            journal.MarkPending(device.Id, tuned, "before/after: tuned");
-            await device.ApplyAsync(tuned, ct);
-            var (tunedR, tunedFan) = await Measure(ct);
-            return new BeforeAfter(stock.Score, tunedR.Score, stock.MaxTempC, tunedR.MaxTempC, stock.AvgPowerW, tunedR.AvgPowerW, stockFan, tunedFan);
+            await SetAsync(TuneSettings.Factory, "before/after: warm-up", ct);
+            await stress.RunAsync(device, WarmUp, ct);
+            var stock = new List<(StressResult R, double Fan)>();
+            var tune = new List<(StressResult R, double Fan)>();
+            for (var i = 0; i < Rounds; i++)
+            {
+                await SetAsync(TuneSettings.Factory, "before/after: stock", ct);
+                stock.Add(await Measure(ct));
+                await SetAsync(tuned, "before/after: tuned", ct);
+                tune.Add(await Measure(ct));
+            }
+            return new BeforeAfter(stock.Average(x => x.R.Score), tune.Average(x => x.R.Score),
+                stock.Max(x => x.R.MaxTempC), tune.Max(x => x.R.MaxTempC),
+                stock.Average(x => x.R.AvgPowerW), tune.Average(x => x.R.AvgPowerW),
+                stock.Average(x => x.Fan), tune.Average(x => x.Fan));
         }
         finally
         {
@@ -31,6 +44,12 @@ public sealed class BeforeAfterRunner(IGpuDevice device, IStressRunner stress, S
         }
     }
 
+    async Task SetAsync(TuneSettings s, string why, CancellationToken ct)
+    {
+        journal.MarkPending(device.Id, s, why);
+        if (s.IsFactory) await device.ResetAsync(ct);
+        else await device.ApplyAsync(s, ct);
+    }
     async Task<(StressResult, double Fan)> Measure(CancellationToken ct)
     {
         var r = await stress.RunAsync(device, Each, ct);

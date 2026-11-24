@@ -78,7 +78,7 @@ public sealed class HomeViewModel(ShellViewModel shell) : ObservableObject
     public string Headline => shell.Device?.Active.IsFactory != false
         ? Copy.HeroLine(0, 0)
         : shell.State?.Profiles.FirstOrDefault(p => p.Id == shell.Device!.ActiveProfileId)?.Measured is { } m
-            ? Copy.HeroLine(m.PerfChangePct, m.TempChangeC)
+            ? Copy.TunedHeroLine(m.PerfChangePct, m.TempChangeC)
             : "Your tune is on. Run a before/after check to see what it's doing.";
 
     internal void OnState()

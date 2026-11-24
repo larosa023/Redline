@@ -161,7 +161,7 @@
           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
           <StackPanel Spacing="8">
             <TextBlock Text="Before/after check" FontWeight="SemiBold" Foreground="{StaticResource RlText}" />
-            <TextBlock Text="About a minute: factory vs. this profile." Foreground="{StaticResource RlMuted}" FontSize="13" TextWrapping="Wrap" />
+            <TextBlock Text="About two minutes: factory and this profile, back and forth. Close games first for a clean result." Foreground="{StaticResource RlMuted}" FontSize="13" TextWrapping="Wrap" />
             <Button Content="Run check" Command="{x:Bind Vm.Tools.BeforeAfterCommand}" CornerRadius="12" MinHeight="36" />
           </StackPanel>
           <StackPanel Grid.Column="1" Spacing="8">
@@ -190,11 +190,11 @@
     <TextBlock Text="Profiles" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource RlText}" />
     <ItemsControl ItemsSource="{x:Bind Vm.Home.Profiles}">
       <ItemsControl.ItemsPanel>
-        <ItemsPanelTemplate><VariableSizedWrapGrid Orientation="Horizontal" ItemWidth="280" ItemHeight="96" /></ItemsPanelTemplate>
+        <ItemsPanelTemplate><VariableSizedWrapGrid Orientation="Horizontal" ItemWidth="300" ItemHeight="112" /></ItemsPanelTemplate>
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:ProfileItemViewModel">
-          <Button Command="{x:Bind ApplyCommand}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalContentAlignment="Left" Margin="0,0,12,12" Padding="18"
+          <Button Command="{x:Bind ApplyCommand}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Top" Margin="0,0,12,12" Padding="18"
                   CornerRadius="20" Background="{StaticResource RlSurface}" BorderBrush="{StaticResource RlLine}" BorderThickness="2" AutomationProperties.Name="{x:Bind Name}">
             <StackPanel Spacing="2">
               <StackPanel Orientation="Horizontal" Spacing="8">

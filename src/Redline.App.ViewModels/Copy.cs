@@ -23,6 +23,12 @@ public static class Copy
 
     public static string KeepPrompt(int s) => $"Keep these settings? Reverting in {s}…";
 
+    /// <summary>Hero line when a tune is on and a before/after check has measured it.</summary>
+    public static string TunedHeroLine(double perfPct, double tempDeltaC) =>
+        perfPct >= 0.5 || tempDeltaC <= -0.5
+            ? HeroLine(perfPct, tempDeltaC)
+            : "Your tune is on. The last check found no clear gain under full load; games often still benefit.";
+
     public static string HeroLine(double perfPct, double tempDeltaC)
     {
         var faster = perfPct >= 0.5 ? $"{perfPct:0}% faster" : null;

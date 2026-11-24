@@ -54,3 +54,27 @@ public class PlatformTests
     [Fact]
     public void PawnIoDetector_DoesNotThrow() => _ = PawnIoDetector.IsInstalled();
 }
+
+public class PerCoreSensorTests
+{
+    [Fact]
+    public void OnlyOneClockPerCore_EffectiveClocksIgnored()
+    {
+        var sensors = new (string Name, int Index, float? Value)[]
+        {
+            ("Core #1", 0, 5500), ("Core #1 (Effective)", 1, 800), ("Core #2", 2, 5400), ("Core #2 (Effective)", 3, 1600),
+            ("Cores (Average Effective)", 4, 1200), ("Bus Speed", 5, 100),
+        };
+        Assert.Equal([5500.0, 5400.0], Redline.Platform.Windows.LhmCpuMonitor.PerCore(sensors, "Core #"));
+    }
+
+    [Fact]
+    public void PerCoreLoads_IgnoreThreads()
+    {
+        var sensors = new (string Name, int Index, float? Value)[]
+        {
+            ("CPU Total", 0, 9), ("CPU Core #1", 1, 20), ("CPU Core #1 Thread #1", 2, 30), ("CPU Core #2", 3, 4),
+        };
+        Assert.Equal([20.0, 4.0], Redline.Platform.Windows.LhmCpuMonitor.PerCore(sensors, "CPU Core #"));
+    }
+}

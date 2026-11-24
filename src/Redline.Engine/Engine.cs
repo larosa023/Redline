@@ -174,6 +174,8 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
                 _journal.MarkConfirmed(s.Dev.Id, s.Active);
             }
 
+            TrimProfilesToSafety();
+
             if (_settings.StartWithWindows && _settings.StartupProfileId is { } pid && TryProfile(pid) is { StabilityTested: true })
                 _startupTimer = _time.CreateTimer(_ => Track(StartupApplyAsync(pid)), null, _o.StartupDelay, Timeout.InfiniteTimeSpan);
 
@@ -188,6 +190,24 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
             Toast($"Couldn't read your {vendor} graphics card", $"Monitoring and tuning for it are unavailable: {error}", "warning");
         if (_lastStartup == StartupDecision.RecoverToFactory)
             Toast("Back to factory settings", "Your PC didn't shut down cleanly while a tune was active, so Redline restored factory settings. Reapply your profile when you're ready.", "warning");
+    }
+
+    /// <summary>
+    /// Profiles hold what Redline will actually apply. One saved with more than the safety settings allow (e.g. 111%
+    /// power with "allow above 100%" off) is trimmed, and its measurement dropped because it described the old values.
+    /// </summary>
+    void TrimProfilesToSafety()
+    {
+        if (Primary is not { } p) return;
+        foreach (var prof in _profiles.All().Where(x => !x.Gpu.IsFactory))
+        {
+            var clamped = SafetyPolicy.Validate(prof.Gpu, p.Dev.Capabilities, _settings.Safety).Clamped;
+            if (clamped.PowerLimitPct == 100) clamped = clamped with { PowerLimitPct = null };
+            clamped = clamped with { Fan = prof.Gpu.Fan };
+            if (clamped == prof.Gpu) continue;
+            _profiles.Update(prof with { Gpu = clamped, Measured = null });
+            Core.Diagnostics.HelperLog.Write($"profile {prof.Id} trimmed to safety limits");
+        }
     }
 
     async Task StartupApplyAsync(string profileId)

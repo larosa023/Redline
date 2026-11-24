@@ -353,4 +353,24 @@ public class AutoTuneStopTests
         var sendIt = (await f.State()).Profiles.Single(p => p.Id == "send-it");
         Assert.True(sendIt.Gpu.PowerLimitPct is null or <= 100);
     }
+
+    [Fact]
+    public async Task StoredProfile_AboveWhatSafetyAllows_IsTrimmedAtStart()
+    {
+        await using var f = new EngineFixture();
+        var store = new Redline.Core.Storage.ProfileStore(f.DataDir);
+        var sendIt = store.Get("send-it");
+        store.Update(sendIt with
+        {
+            Gpu = new TuneSettings(111, 225, 1200, null, null), StabilityTested = true,
+            Measured = new Redline.Core.Stats.BeforeAfter(100, 108, 60, 62, 300, 340, 40, 45),
+        });
+        await f.StartAsync();
+
+        var p = (await f.State()).Profiles.Single(x => x.Id == "send-it");
+        Assert.Null(p.Gpu.PowerLimitPct);          // 100% is the default, stored as "not changed"
+        Assert.Equal(225, p.Gpu.CoreOffsetMhz);
+        Assert.Null(p.Measured);                   // measured at 111%: no longer describes this profile
+        Assert.True(p.StabilityTested);            // less power than tested is still tested
+    }
 }
