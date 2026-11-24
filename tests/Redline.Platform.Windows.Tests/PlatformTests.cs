@@ -42,9 +42,10 @@ public class PlatformTests
         Assert.Equal(expected, StabilityEventFilter.IsDriverReset(provider, id));
 
     [Fact]
-    public void LhmCpuMonitor_ReturnsName()
+    public async Task LhmCpuMonitor_ReturnsName()
     {
         using var m = new LhmCpuMonitor();
+        await m.Opened.WaitAsync(TimeSpan.FromSeconds(60));
         var s = m.Read();
         Assert.NotNull(s);
         Assert.False(string.IsNullOrWhiteSpace(s!.Name));

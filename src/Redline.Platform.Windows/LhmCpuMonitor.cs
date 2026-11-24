@@ -25,6 +25,9 @@ public sealed class LhmCpuMonitor : ICpuMonitor, IGpuExtraSensors, IDisposable
 
     bool Ready => _open.IsCompletedSuccessfully;
 
+    /// <summary>Completes when the sensors are open and readings are available.</summary>
+    public Task Opened => _open;
+
     static double? Val(IEnumerable<ISensor> s, SensorType t, params string[] names) =>
         names.Select(n => s.FirstOrDefault(x => x.SensorType == t && x.Name.Contains(n, StringComparison.OrdinalIgnoreCase))?.Value)
              .FirstOrDefault(v => v is not null);

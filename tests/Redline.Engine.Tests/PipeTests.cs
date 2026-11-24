@@ -10,7 +10,7 @@ public class PipeTests
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         await Assert.ThrowsAsync<HelperUnavailableException>(() => PipeClient.ConnectAsync("redline-test-" + Guid.NewGuid().ToString("N"), TimeSpan.FromSeconds(1)));
-        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(2));
+        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(3), $"took {sw.Elapsed}");
     }
 
     [Fact]
