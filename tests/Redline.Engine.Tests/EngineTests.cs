@@ -246,3 +246,29 @@ public class EngineTests : IAsyncLifetime
         Assert.Equal(MessageTypes.ErrorResponse, (await F.Send(MessageTypes.ResetFactory, new DeviceRequest("nope"))).Type);
     }
 }
+
+public class AutoTuneStopTests
+{
+    [Fact]
+    public async Task BackToFactory_DuringAutoTune_EndsAtFactory()
+    {
+        await using var f = new EngineFixture();
+        using var reached = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        f.Stress.OnRun = i => { if (i == 6) { reached.Set(); release.Wait(TimeSpan.FromSeconds(10)); } };
+        await f.StartAsync();
+        await f.Send(MessageTypes.StartAutoTune, new StartAutoTuneRequest("gpu0", new Redline.Core.AutoTune.AutoTuneOptions(Redline.Core.AutoTune.AutoTuneMode.Performance), "send-it"));
+        Assert.True(reached.Wait(TimeSpan.FromSeconds(10)));
+        Assert.False(f.Gpu.Current.IsFactory);                 // mid-test: a raised clock is on the card
+
+        var reset = f.Send(MessageTypes.ResetFactory, new DeviceRequest("gpu0"));
+        await Task.Delay(200);
+        release.Set();                                         // the stress step finishes after the button press
+        await reset;
+        await f.Engine.AutoTuneTask!;
+        await f.Engine.IdleAsync();
+
+        Assert.True(f.Gpu.Current.IsFactory);
+        Assert.True((await f.State()).Devices[0].Active.IsFactory);
+    }
+}

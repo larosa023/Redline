@@ -144,7 +144,7 @@ public sealed partial class Engine
     async Task<IpcMessage> ResetFactoryAsync(IpcMessage req)
     {
         var s = SlotFor(Need<DeviceRequest>(req).DeviceId);
-        _autoTuneCts?.Cancel();
+        await StopAutoTuneStepsAsync();
         CancelPending(s);
         var before = s.Active;
         await ApplyLockedAsync(s, TuneSettings.Factory, "factory", confirm: true);
@@ -177,9 +177,11 @@ public sealed partial class Engine
         var opts = r.Options with { AllowPowerAbove100 = r.Options.AllowPowerAbove100 && _settings.Safety.AllowPowerAbove100 };
         var tuner = new AutoTuner(s.Dev, _stress, _journal, _settings.Safety);
         var progress = new Progress(p => Emit(MessageTypes.AutoTuneProgress, new AutoTuneProgressEvent(s.Dev.Id, p, null)));
+        var run = Task.Run(() => tuner.RunAsync(opts, progress, cts.Token));
+        _autoTuneRun = run;
         AutoTuneTask = Task.Run(async () =>
         {
-            var result = await tuner.RunAsync(opts, progress, cts.Token);
+            var result = await run;
             await _gate.WaitAsync();
             try
             {
@@ -248,6 +250,20 @@ public sealed partial class Engine
         });
         Track(BeforeAfterTask);
         return IpcMessage.OkFor(req.Id);
+    }
+
+    /// <summary>
+    /// Cancels auto-tune and waits for its current step to stop, so it can't put its last good settings back on the
+    /// card after we've gone to factory. (Its wrap-up runs later, once the request lock is free.)
+    /// </summary>
+    async Task StopAutoTuneStepsAsync()
+    {
+        _autoTuneCts?.Cancel();
+        if (_autoTuneRun is { IsCompleted: false } run)
+        {
+            try { await run.WaitAsync(TimeSpan.FromSeconds(30)); }
+            catch (Exception) { /* outcome and errors are handled by the auto-tune task itself */ }
+        }
     }
 
     IpcMessage CancelAutoTune(IpcMessage req)

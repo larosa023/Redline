@@ -83,6 +83,7 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
     int _subscribers;
     bool _disposed;
     CancellationTokenSource? _autoTuneCts;
+    Task? _autoTuneRun;
     int _runningGames;
 
     readonly IGpuExtraSensors? _extras;
