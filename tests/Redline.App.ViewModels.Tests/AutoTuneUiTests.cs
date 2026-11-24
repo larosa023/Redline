@@ -46,3 +46,21 @@ public class AutoTuneUiTests
         Assert.False(s.AutoTune.MemoryOnlyAvailable);
     }
 }
+
+public class ProfileLabelTests
+{
+    [Fact]
+    public async Task UntestedSendIt_SaysNotFullyTested_WithItsSettings()
+    {
+        var h = new FakeHelper();
+        h.State = h.State with
+        {
+            Profiles = h.State.Profiles.Select(p => p.Id == "send-it" ? p with { Gpu = new TuneSettings(111, 225, 2300, null, null), StabilityTested = false } : p).ToList(),
+        };
+        var s = new ShellViewModel(h, FakeHelper.Inline) { Delay = HelperRecoveryTests.InstantThenNever(0) };
+        await s.LoadAsync();
+        var sub = s.Home.Profiles.Single(p => p.Id == "send-it").Subtitle;
+        Assert.StartsWith("Not fully tested · ", sub);
+        Assert.Contains("Core +225 MHz", sub);
+    }
+}

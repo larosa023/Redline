@@ -284,4 +284,46 @@ public class AutoTuneStopTests
         await f.Engine.AutoTuneTask!;
         Assert.All(f.Stress.Tested.Skip(1), x => Assert.Equal(150, x.CoreOffsetMhz));
     }
+
+    static Redline.Core.AutoTune.AutoTuneOptions PerfOpts => new(Redline.Core.AutoTune.AutoTuneMode.Performance);
+
+    [Fact]
+    public async Task StoppedEarly_SavesWhatPassed_ButNotAsFullyTested()
+    {
+        await using var f = new EngineFixture();
+        using var reached = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        f.Stress.OnRun = i => { if (i == 6) { reached.Set(); release.Wait(TimeSpan.FromSeconds(10)); } };
+        await f.StartAsync();
+        await f.Send(MessageTypes.StartAutoTune, new StartAutoTuneRequest("gpu0", PerfOpts, "send-it"));
+        Assert.True(reached.Wait(TimeSpan.FromSeconds(10)));
+        await f.Send(MessageTypes.CancelAutoTune);
+        release.Set();
+        await f.Engine.AutoTuneTask!;
+
+        var sendIt = (await f.State()).Profiles.Single(p => p.Id == "send-it");
+        Assert.False(sendIt.Gpu.IsFactory);
+        Assert.Equal(f.Gpu.Current.CoreOffsetMhz, sendIt.Gpu.CoreOffsetMhz);
+        Assert.False(sendIt.StabilityTested);          // the 5-minute final check never ran
+        Assert.Equal("send-it", (await f.State()).Devices[0].ActiveProfileId);
+    }
+
+    [Fact]
+    public async Task HelperStop_MidTest_LeavesLastGood_NotTheStepUnderTest()
+    {
+        await using var f = new EngineFixture();
+        using var reached = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        f.Stress.OnRun = i => { if (i == 6) { reached.Set(); release.Wait(TimeSpan.FromSeconds(10)); } };
+        await f.StartAsync();
+        await f.Send(MessageTypes.StartAutoTune, new StartAutoTuneRequest("gpu0", PerfOpts, "send-it"));
+        Assert.True(reached.Wait(TimeSpan.FromSeconds(10)));
+        var underTest = f.Gpu.Current.CoreOffsetMhz;
+
+        _ = Task.Run(async () => { await Task.Delay(200); release.Set(); });
+        await f.Engine.StopAsync(keepTune: true);       // the process exits right after this returns
+
+        Assert.NotEqual(underTest, f.Gpu.Current.CoreOffsetMhz);
+        Assert.True(f.Gpu.Current.CoreOffsetMhz < underTest);
+    }
 }

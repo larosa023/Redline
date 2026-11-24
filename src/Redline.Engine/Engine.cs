@@ -201,7 +201,9 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
     /// <summary>Service stop. keepTune=false returns everything to factory first.</summary>
     public async Task StopAsync(bool keepTune)
     {
-        _autoTuneCts?.Cancel();
+        // Let a running auto-tune step back to its last passing settings before the process exits,
+        // instead of leaving the untested step on the card.
+        await StopAutoTuneStepsAsync();
         await _gate.WaitAsync();
         try
         {

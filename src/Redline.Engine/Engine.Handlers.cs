@@ -200,6 +200,13 @@ public sealed partial class Engine
                     await ApplyProfileLockedAsync(s, updated, "auto-tune result");
                     if (s == Primary) SetBaseProfile(updated.Id);
                 }
+                else if (result.Outcome == AutoTuneOutcome.Cancelled && !s.Active.IsFactory)
+                {
+                    // Stopped early: keep what passed in the profile, but it skipped the final check, so it isn't
+                    // marked as fully tested (and won't be used for "start with Windows").
+                    _profiles.Update(target with { Gpu = s.Active with { Fan = target.Gpu.Fan }, StabilityTested = false, TestedAt = null, Measured = null });
+                    s.ActiveProfileId = target.Id;
+                }
                 else s.ActiveProfileId = s.Active.IsFactory ? Profile.FactoryId : null;
             }
             finally { _gate.Release(); }

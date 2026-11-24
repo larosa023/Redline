@@ -98,6 +98,7 @@ public sealed class HomeViewModel(ShellViewModel shell) : ObservableObject
         _ when p.Gpu.IsFactory && !p.StabilityTested => "Not tuned yet — run auto-tune",
         _ => string.Join(" · ", new[]
         {
+            p.StabilityTested || p.Id is not (Profile.SendItId or Profile.WhisperId) ? null : "Not fully tested",
             p.Gpu.CoreOffsetMhz is { } c ? $"Core {c:+0;-0} MHz" : null,
             p.Gpu.MemoryOffsetMhz is { } m ? $"Memory {m:+0;-0} MHz" : null,
             p.Gpu.PowerLimitPct is { } w ? $"Power {w}%" : null,
