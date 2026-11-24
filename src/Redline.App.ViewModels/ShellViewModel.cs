@@ -24,6 +24,11 @@ public sealed class ShellViewModel : ObservableObject
         Tune = new TuneViewModel(this);
         Fans = new FansViewModel(this);
         AutoTune = new AutoTuneViewModel(this);
+        Stats = new StatsViewModel(this);
+        Games = new GamesViewModel(this);
+        Cpu = new CpuViewModel(this);
+        Tools = new ToolsViewModel(this);
+        Overlay = new OverlayViewModel(this);
         RepairCommand = new RelayCommand(() => RepairRequested?.Invoke());
         RetryCommand = new AsyncRelayCommand(LoadAsync);
         SetThemeCommand = new ParamCommand<string>(k => _ = SetThemeAsync(k));
@@ -35,6 +40,11 @@ public sealed class ShellViewModel : ObservableObject
     public TuneViewModel Tune { get; }
     public FansViewModel Fans { get; }
     public AutoTuneViewModel AutoTune { get; }
+    public StatsViewModel Stats { get; }
+    public GamesViewModel Games { get; }
+    public CpuViewModel Cpu { get; }
+    public ToolsViewModel Tools { get; }
+    public OverlayViewModel Overlay { get; }
     public RelayCommand RepairCommand { get; }
     public AsyncRelayCommand RetryCommand { get; }
     public ParamCommand<string> SetThemeCommand { get; }
@@ -134,6 +144,10 @@ public sealed class ShellViewModel : ObservableObject
         Tune.OnState();
         Fans.OnState();
         AutoTune.OnState();
+        Games.OnState();
+        Cpu.OnState();
+        Tools.OnState();
+        Overlay.OnState();
     }
 
     void OnEvent(IpcMessage m)
@@ -141,7 +155,9 @@ public sealed class ShellViewModel : ObservableObject
         switch (m.Type)
         {
             case MessageTypes.State when m.PayloadAs<HelperState>() is { } s: State = s; break;
-            case MessageTypes.Telemetry when m.PayloadAs<TelemetryEvent>() is { } t: Home.OnTelemetry(t); break;
+            case MessageTypes.Telemetry when m.PayloadAs<TelemetryEvent>() is { } t: Home.OnTelemetry(t); Overlay.OnTelemetry(t); break;
+            case MessageTypes.FpsSample when m.PayloadAs<FpsSampleEvent>() is { } f: Overlay.OnFps(f); break;
+            case MessageTypes.BeforeAfterResult when m.PayloadAs<BeforeAfterResultEvent>() is { } b: Tools.OnBeforeAfter(b); break;
             case MessageTypes.KeepOrRevertTick when m.PayloadAs<KeepOrRevertTickEvent>() is { } k:
                 Tune.OnTick(k);
                 if (k.Done) _ = RefreshAsync();

@@ -32,6 +32,14 @@ jobs:
         run: dotnet publish src/Redline.App/Redline.App.csproj -c Release -r win-x64 --self-contained -p:Version=${{ steps.v.outputs.version }} -p:Platform=x64 -p:PublishReadyToRun=true -o publish
       - name: Publish helper
         run: dotnet publish src/Redline.Helper/Redline.Helper.csproj -c Release -r win-x64 --self-contained -p:Version=${{ steps.v.outputs.version }} -p:PublishReadyToRun=true -o publish/helper
+      - name: Bundle PresentMon (FPS for the overlay)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          url=$(gh api repos/GameTechDev/PresentMon/releases/latest --jq '.assets[] | select(.name | test("^PresentMon-.*-x64\\.exe$")) | .browser_download_url' | head -1)
+          echo "PresentMon: $url"
+          if [ -n "$url" ]; then curl -sSfL -o publish/helper/PresentMon.exe "$url"; fi
       - name: Licenses
         shell: bash
         run: cp LICENSE THIRD-PARTY-NOTICES.md publish/

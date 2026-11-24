@@ -14,6 +14,8 @@ public sealed class FakeExtras : IGpuExtraSensors
 public sealed class FakeFrames : IFrameSource
 {
     public event Action<string, IReadOnlyList<double>>? Frames;
+    public bool Enabled;
+    public void SetEnabled(bool enabled) => Enabled = enabled;
     public void Push(string proc, IReadOnlyList<double> ft) => Frames?.Invoke(proc, ft);
 }
 
@@ -57,6 +59,16 @@ public class BatchFeatureTests : IAsyncLifetime
         F.Time.Advance(TimeSpan.FromSeconds(5)); await F.Engine.IdleAsync();
         var r = (await F.Send(MessageTypes.GetSeries, new SeriesRequest(StatsRange.FiveMinutes))).PayloadAs<SeriesResponse>()!;
         Assert.Contains(r.Series, s => s.Metric == "FPS");
+    }
+
+    [Fact]
+    public async Task FrameSource_FollowsOverlaySetting()
+    {
+        var frames = new FakeFrames();
+        await F.StartAsync(frames: frames);
+        Assert.False(frames.Enabled);
+        await F.Send(MessageTypes.UpdateSettings, new SettingsRequest(new AppSettings { OverlayEnabled = true }));
+        Assert.True(frames.Enabled);
     }
 
     [Fact]

@@ -265,6 +265,7 @@ public sealed partial class Engine
         _settingsStore.Save(_settings);
         foreach (var s in _slots) s.Guard.CeilingC = n.TempCeilingC;
         _switcher = new ProfileSwitcher(n.GameRules, _settings.BaseProfileId);
+        _frames?.SetEnabled(n.OverlayEnabled);
         return IpcMessage.OkFor(req.Id, BuildState());
     }
 

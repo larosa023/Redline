@@ -5,6 +5,8 @@ using Redline.Ipc;
 
 namespace Redline.App.ViewModels;
 
+public sealed record CoreItem(string Name, string ClockText, double LoadPct);
+
 public sealed class ProfileItemViewModel(string id, string name, string icon, string subtitle, bool active, Func<Task> apply) : ObservableObject
 {
     public string Id { get; } = id;
@@ -44,6 +46,30 @@ public sealed class HomeViewModel(ShellViewModel shell) : ObservableObject
     public IReadOnlyList<double> PowerHistory => _powerHist.ToList();
 
     public ObservableCollection<string> Chips { get; } = new();
+    public ObservableCollection<CoreItem> Cores { get; } = new();
+
+    string _memClock = "—", _hotspot = "—", _memTemp = "—", _vramText = "—", _rpm = "—", _plim = "—", _limit = "", _ram = "—", _cpuPower = "—";
+    public string MemClockText { get => _memClock; private set => SetProperty(ref _memClock, value); }
+    public string HotspotText { get => _hotspot; private set => SetProperty(ref _hotspot, value); }
+    public string MemTempText { get => _memTemp; private set => SetProperty(ref _memTemp, value); }
+    public string VramText { get => _vramText; private set => SetProperty(ref _vramText, value); }
+    public string FanRpmText { get => _rpm; private set => SetProperty(ref _rpm, value); }
+    public string PowerLimitText { get => _plim; private set => SetProperty(ref _plim, value); }
+    public string LimitText { get => _limit; private set => SetProperty(ref _limit, value); }
+    public string RamText { get => _ram; private set => SetProperty(ref _ram, value); }
+    public string CpuPowerText { get => _cpuPower; private set => SetProperty(ref _cpuPower, value); }
+
+    public static string LimitWords(Core.Gpu.LimitReason r)
+    {
+        if (r == Core.Gpu.LimitReason.None) return "Nothing is holding it back";
+        var parts = new List<string>();
+        if (r.HasFlag(Core.Gpu.LimitReason.Power)) parts.Add("power");
+        if (r.HasFlag(Core.Gpu.LimitReason.Temperature)) parts.Add("temperature");
+        if (r.HasFlag(Core.Gpu.LimitReason.Voltage)) parts.Add("voltage");
+        if (r.HasFlag(Core.Gpu.LimitReason.Slowdown)) parts.Add("a hardware slowdown");
+        if (parts.Count == 0) return "Idle";
+        return "Limited by " + string.Join(" and ", parts);
+    }
     public ObservableCollection<ProfileItemViewModel> Profiles { get; } = new();
 
     public WeeklySummary? Weekly { get => _weekly; private set => SetProperty(ref _weekly, value); }
@@ -87,9 +113,24 @@ public sealed class HomeViewModel(ShellViewModel shell) : ObservableObject
             CoreClockMhz = t.CoreClockMhz; TempC = t.TempC; PowerW = t.PowerW; UsagePct = t.UsagePct;
             FanPct = t.FanPct ?? 0; VramUsedMb = t.VramUsedMb;
             Push(_tempHist, t.TempC); Push(_powerHist, t.PowerW);
+            MemClockText = $"{t.MemClockMhz:N0} MHz";
+            HotspotText = t.HotspotC is { } h ? $"{h:0}°" : "—";
+            MemTempText = t.MemTempC is { } mt ? $"{mt:0}°" : "—";
+            VramText = t.VramTotalMb is { } tot ? $"{t.VramUsedMb / 1024:0.0} / {tot / 1024:0.0} GB" : $"{t.VramUsedMb / 1024:0.0} GB";
+            FanRpmText = t.FanRpm is { } rpm ? $"{rpm:N0} RPM" : "—";
+            PowerLimitText = t.PowerLimitUsePct is { } pl ? $"{pl:0}% of limit" : "—";
+            LimitText = LimitWords(t.Limits);
             OnPropertyChanged(nameof(TempHistory)); OnPropertyChanged(nameof(PowerHistory));
         }
-        if (e.Cpu is { } c) { CpuTempC = c.PackageTempC; CpuUsagePct = c.UsagePct; CpuClockMhz = c.EffectiveClockMhz; }
+        if (e.Cpu is { } c)
+        {
+            CpuTempC = c.PackageTempC; CpuUsagePct = c.UsagePct; CpuClockMhz = c.EffectiveClockMhz;
+            RamText = c.RamUsedGb is { } u && c.RamTotalGb is { } tot ? $"{u:0.0} / {tot:0.0} GB" : "—";
+            CpuPowerText = c.PackagePowerW is { } w ? $"{w:0} W" : "—";
+            var cores = c.CoreClocksMhz.Select((mhz, i) => new CoreItem($"Core {i + 1}", $"{mhz / 1000:0.0} GHz", i < c.CoreLoadsPct.Count ? c.CoreLoadsPct[i] : 0)).ToList();
+            if (cores.Count != Cores.Count) { Cores.Clear(); foreach (var x in cores) Cores.Add(x); }
+            else for (var i = 0; i < cores.Count; i++) if (Cores[i] != cores[i]) Cores[i] = cores[i];
+        }
         UpdateChips();
     }
 

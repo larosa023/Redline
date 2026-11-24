@@ -29,6 +29,8 @@ public interface IProcessWatcher
 public interface IFrameSource
 {
     event Action<string, IReadOnlyList<double>>? Frames;
+    /// <summary>FPS tracking runs only while the overlay is on.</summary>
+    void SetEnabled(bool enabled);
 }
 
 public interface IStabilitySignals
@@ -171,7 +173,7 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
             _procs.Started += OnGameStarted;
             _procs.Stopped += OnGameStopped;
             _signals.DriverReset += OnDriverReset;
-            if (_frames is not null) _frames.Frames += OnFrames;
+            if (_frames is not null) { _frames.Frames += OnFrames; _frames.SetEnabled(_settings.OverlayEnabled); }
             _poll = _time.CreateTimer(_ => Track(TickAsync()), null, CurrentPollInterval, CurrentPollInterval);
         }
         finally { _gate.Release(); }

@@ -24,9 +24,10 @@ public static class Composition
         var cpu = new LhmCpuMonitor(); owned.Add(cpu);
         IProcessWatcher procs = (IProcessWatcher?)TryCreate(() => new WmiProcessWatcher(), owned) ?? new NoProcesses();
         IStabilitySignals signals = (IStabilitySignals?)TryCreate(() => new EventLogStabilitySignals(), owned) ?? new NoSignals();
+        var frames = new PresentMonFrameSource(Path.Combine(AppContext.BaseDirectory, "PresentMon.exe")); owned.Add(frames);
         return new Engine.Engine(new EngineOptions(dataDir, HelperVersion: Version), backends,
             new D3D11StressRunner(new GoldenStore(dataDir), forceWarp: demo), new PowrProfPowerPlan(), cpu, procs, signals,
-            TimeProvider.System, PawnIoDetector.IsInstalled);
+            TimeProvider.System, PawnIoDetector.IsInstalled, extras: demo ? null : cpu, frames: frames);
     }
 
     static T? TryCreate<T>(Func<T> f, List<IDisposable> owned) where T : class, IDisposable
