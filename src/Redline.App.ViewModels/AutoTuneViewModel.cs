@@ -85,8 +85,8 @@ public sealed class AutoTuneViewModel : ObservableObject
             AutoTuneOutcome.FailedAtBaseline => "Your card wasn't stable even at factory settings, so Redline stopped. Check cooling and drivers before tuning.",
             AutoTuneOutcome.Cancelled => "Stopped. Redline kept the last settings that passed.",
             _ when r.Best.IsFactory => "Your card is happiest at factory settings. Nothing was changed.",
-            _ when _mode == AutoTuneMode.Efficiency => $"Done. Saving about {r.BaselinePowerW - r.FinalPowerW:0} W at {(r.FinalScore / r.BaselineScore - 1) * 100:+0.0;−0.0}% performance.",
-            _ => $"Done. About {(r.FinalScore / r.BaselineScore - 1) * 100:+0;−0}% faster than factory, saved to your profile.",
+            _ when _mode == AutoTuneMode.Efficiency => $"Done. Saving about {r.BaselinePowerW - r.FinalPowerW:0} W at {Numbers.Signed((r.FinalScore / r.BaselineScore - 1) * 100, 1)}% performance.",
+            _ => $"Done. About {Numbers.Signed((r.FinalScore / r.BaselineScore - 1) * 100)}% faster than factory, saved to your profile.",
         };
     }
 }

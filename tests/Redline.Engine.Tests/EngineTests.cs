@@ -340,4 +340,17 @@ public class AutoTuneStopTests
         lock (f.Events) last = f.Events.Last(m => m.Type == MessageTypes.State);
         Assert.False(last.PayloadAs<HelperState>()!.AutoTuneRunning);
     }
+
+    [Fact]
+    public async Task MemoryOnly_DropsPowerAbove100_WhenThatIsNotAllowed()
+    {
+        await using var f = new EngineFixture();
+        await f.Gpu.ApplyAsync(new TuneSettings(111, 150, null, null, null), default);   // left on the card from before
+        await f.StartAsync();
+        await f.Send(MessageTypes.StartAutoTune, new StartAutoTuneRequest("gpu0", PerfOpts with { KeepFrom = TuneSettings.Factory }, "send-it"));
+        await f.Engine.AutoTuneTask!;
+        Assert.All(f.Stress.Tested.Skip(1), x => Assert.True(x.PowerLimitPct is null or <= 100, $"tested at {x.PowerLimitPct}%"));
+        var sendIt = (await f.State()).Profiles.Single(p => p.Id == "send-it");
+        Assert.True(sendIt.Gpu.PowerLimitPct is null or <= 100);
+    }
 }

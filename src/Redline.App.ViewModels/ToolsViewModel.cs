@@ -42,7 +42,7 @@ public sealed class ToolsViewModel : ObservableObject
     public string ScoreText => Score is { } s ? $"{s.Score} / 100 · {s.Tier}" : "Run auto-tune on this profile to get a chip score.";
 
     public static string Words(BeforeAfter b) =>
-        $"{b.PerfChangePct:+0;−0}% performance · {b.TempChangeC:+0;−0} °C · {b.PowerChangeW:+0;−0} W";
+        $"{Numbers.Signed(b.PerfChangePct)}% performance · {Numbers.Signed(b.TempChangeC)} °C · {Numbers.Signed(b.PowerChangeW)} W";
 
     internal void OnState() => Refresh();
 

@@ -64,3 +64,13 @@ public class ProfileLabelTests
         Assert.Contains("Core +225 MHz", sub);
     }
 }
+
+public class SignedFormatTests
+{
+    [Theory]
+    [InlineData(-0.3, "+0")]
+    [InlineData(0.2, "+0")]
+    [InlineData(8.4, "+8")]
+    [InlineData(-2.6, "−3")]
+    public void Signed_NeverPrintsMinusPlus(double v, string expected) => Assert.Equal(expected, Numbers.Signed(v));
+}

@@ -177,7 +177,9 @@ public sealed partial class Engine
         var opts = r.Options with
         {
             AllowPowerAbove100 = r.Options.AllowPowerAbove100 && _settings.Safety.AllowPowerAbove100,
-            KeepFrom = r.Options.MemoryOnly ? s.Active : null,      // memory-only keeps what's on the card, never the app's numbers
+            // Memory-only keeps what's on the card (never the app's numbers), trimmed to what the safety settings allow,
+            // so the saved profile is exactly what Redline will apply later.
+            KeepFrom = r.Options.MemoryOnly ? SafetyPolicy.Validate(s.Active, s.Dev.Capabilities, _settings.Safety).Clamped : null,
         };
         var tuner = new AutoTuner(s.Dev, _stress, _journal, _settings.Safety);
         var progress = new Progress(p => Emit(MessageTypes.AutoTuneProgress, new AutoTuneProgressEvent(s.Dev.Id, p, null)));
