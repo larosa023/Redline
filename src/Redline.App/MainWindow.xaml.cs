@@ -17,6 +17,8 @@ public sealed partial class MainWindow : Window
 {
     readonly HelperLauncher _launcher;
     readonly OverlayWindow _overlay;
+    readonly TrayHost _tray;
+    bool _quitting;
     readonly Dictionary<string, FrameworkElement> _pages = new();
     readonly Dictionary<string, Button> _navButtons = new();
     string _current = "Home";
@@ -62,7 +64,20 @@ public sealed partial class MainWindow : Window
         overlayTimer.Interval = TimeSpan.FromSeconds(1);
         overlayTimer.Tick += (_, _) => Vm.Overlay.Tick(DateTimeOffset.UtcNow);
         overlayTimer.Start();
-        Closed += async (_, _) => { _overlay.Dispose(); await _launcher.DisposeAsync(); };
+        _tray = new TrayHost(Path.Combine(AppContext.BaseDirectory, "Assets", "redline.ico"));
+        _tray.OpenRequested += ShowFromTray;
+        _tray.ProfilePicked += id => _ = Vm.Tray.ApplyAsync(id);
+        _tray.HotkeyPressed += id => _ = Vm.Tray.OnHotkeyAsync(id);
+        _tray.QuitRequested += () => _ = QuitAsync();
+        Vm.Tray.Changed += SyncTray;
+        AppWindow.Closing += (_, e) =>
+        {
+            // Spec §6.10: closing the window with a tune active keeps Redline in the tray.
+            if (_quitting || Vm.Tray.OnWindowClose() == CloseAction.Exit) return;
+            e.Cancel = true;
+            AppWindow.Hide();
+        };
+        Closed += async (_, _) => { _tray.Dispose(); _overlay.Dispose(); await _launcher.DisposeAsync(); };
         _ = StartAsync();
     }
 
@@ -75,6 +90,49 @@ public sealed partial class MainWindow : Window
         timer.Interval = TimeSpan.FromHours(6);
         timer.Tick += async (_, _) => await Updates.CheckAsync();
         timer.Start();
+    }
+
+    string _hotkeysRegistered = "";
+
+    void SyncTray()
+    {
+        _tray.SetMenu(Vm.Tray.MenuItems);
+        _tray.SetTooltip($"Redline · {Vm.Status}");
+        var key = string.Join(";", Vm.Tray.Hotkeys.Select(b => b.ProfileId + "=" + b.Gesture));
+        if (key == _hotkeysRegistered) return;
+        _hotkeysRegistered = key;
+        var refused = _tray.SetHotkeys(Vm.Tray.Hotkeys);
+        if (refused.Count > 0)
+            Vm.LastError = $"{string.Join(", ", refused)} {(refused.Count == 1 ? "is" : "are")} already used by another app. Pick a different shortcut in Settings.";
+    }
+
+    void ShowFromTray()
+    {
+        AppWindow.Show();
+        Activate();
+    }
+
+    async Task QuitAsync()
+    {
+        ShowFromTray();
+        if (Vm.Tray.IsTuned)
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = Content.XamlRoot,
+                Title = "Quit Redline?",
+                Content = "Going back to factory is the safe choice. If you keep your tune, it stays on the card until you restart the PC or change it.",
+                PrimaryButtonText = "Back to factory",
+                SecondaryButtonText = "Keep my tune",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+            };
+            var r = await dialog.ShowAsync();
+            if (r == ContentDialogResult.None) return;
+            await Vm.Tray.QuitAsync(r == ContentDialogResult.Primary ? QuitChoice.BackToFactory : QuitChoice.KeepTune);
+        }
+        _quitting = true;
+        Close();
     }
 
     void OnVmChanged(object? sender, PropertyChangedEventArgs e)

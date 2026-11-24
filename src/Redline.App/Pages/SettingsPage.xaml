@@ -15,6 +15,12 @@
         </ComboBox>
         <TextBlock Text="The overlay shows over borderless and windowed games. Some exclusive-fullscreen games hide it. It never touches the game itself, so it's safe with anti-cheat."
                    Foreground="{StaticResource RlMuted}" TextWrapping="Wrap" FontSize="13" />
+        <StackPanel Spacing="8">
+          <TextBlock Text="Profile shortcuts" Foreground="{StaticResource RlText}" FontWeight="SemiBold" />
+          <TextBlock Text="Click a profile's button, then press a shortcut like Ctrl+Alt+1. Works even in games. Esc cancels."
+                     Foreground="{StaticResource RlMuted}" TextWrapping="Wrap" FontSize="13" />
+          <StackPanel x:Name="Shortcuts" Spacing="8" />
+        </StackPanel>
         <TextBlock Text="Redline sends nothing about you anywhere. The only thing it checks online is whether there's an update."
                    Foreground="{StaticResource RlMuted}" TextWrapping="Wrap" />
         <TextBlock x:Name="Version" Foreground="{StaticResource RlMuted}" />

@@ -29,6 +29,7 @@ public sealed class ShellViewModel : ObservableObject
         Cpu = new CpuViewModel(this);
         Tools = new ToolsViewModel(this);
         Overlay = new OverlayViewModel(this);
+        Tray = new TrayViewModel(this);
         RepairCommand = new AsyncRelayCommand(RepairAsync);
         RetryCommand = new AsyncRelayCommand(LoadAsync);
         SetThemeCommand = new ParamCommand<string>(k => _ = SetThemeAsync(k));
@@ -45,6 +46,7 @@ public sealed class ShellViewModel : ObservableObject
     public CpuViewModel Cpu { get; }
     public ToolsViewModel Tools { get; }
     public OverlayViewModel Overlay { get; }
+    public TrayViewModel Tray { get; }
     public AsyncRelayCommand RepairCommand { get; }
     public AsyncRelayCommand RetryCommand { get; }
     public ParamCommand<string> SetThemeCommand { get; }
@@ -225,6 +227,7 @@ public sealed class ShellViewModel : ObservableObject
         Cpu.OnState();
         Tools.OnState();
         Overlay.OnState();
+        Tray.OnStateChanged();
     }
 
     void OnEvent(IpcMessage m)
