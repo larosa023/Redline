@@ -45,6 +45,9 @@ public sealed class D3D11StressRunner(GoldenStore golden, uint? elements = null,
         using var csCompute = device.CreateComputeShader(Compiler.Compile(source, "Compute", "stress.hlsl", "cs_5_0").Span);
         using var csVerify = device.CreateComputeShader(Compiler.Compile(source, "Verify", "stress.hlsl", "cs_5_0").Span);
         using var csReset = device.CreateComputeShader(Compiler.Compile(source, "Reset", "stress.hlsl", "cs_5_0").Span);
+        using var csStreamInit = device.CreateComputeShader(Compiler.Compile(source, "StreamInit", "stress.hlsl", "cs_5_0").Span);
+        using var csStream = device.CreateComputeShader(Compiler.Compile(source, "Stream", "stress.hlsl", "cs_5_0").Span);
+        using var csStreamVerify = device.CreateComputeShader(Compiler.Compile(source, "StreamVerify", "stress.hlsl", "cs_5_0").Span);
 
         using var data = device.CreateBuffer(new BufferDescription(n * 4, BindFlags.UnorderedAccess, ResourceUsage.Default,
             CpuAccessFlags.None, ResourceOptionFlags.BufferStructured, 4));
@@ -55,10 +58,23 @@ public sealed class D3D11StressRunner(GoldenStore golden, uint? elements = null,
         using var dataUav = device.CreateUnorderedAccessView(data, new UnorderedAccessViewDescription(data, Format.Unknown, 0u, n));
         using var resUav = device.CreateUnorderedAccessView(result, new UnorderedAccessViewDescription(result, Format.Unknown, 0u, 2u));
 
+        // Bandwidth phase: two buffers of uint4, each the same size as the main buffer (n * 4 bytes).
+        var sn = Math.Max(1u, n / 4);
+        using var src = device.CreateBuffer(new BufferDescription(sn * 16, BindFlags.UnorderedAccess, ResourceUsage.Default,
+            CpuAccessFlags.None, ResourceOptionFlags.BufferStructured, 16));
+        using var dst = device.CreateBuffer(new BufferDescription(sn * 16, BindFlags.UnorderedAccess, ResourceUsage.Default,
+            CpuAccessFlags.None, ResourceOptionFlags.BufferStructured, 16));
+        using var srcUav = device.CreateUnorderedAccessView(src, new UnorderedAccessViewDescription(src, Format.Unknown, 0u, sn));
+        using var dstUav = device.CreateUnorderedAccessView(dst, new UnorderedAccessViewDescription(dst, Format.Unknown, 0u, sn));
+        const int StreamPasses = 8;
+        double streamBytes = 0, streamSecs = 0;
+
         var rowWidth = GroupsX * GroupSize;
         var groupsY = (n + rowWidth - 1) / rowWidth;
         var groupsX = n < rowWidth ? (n + GroupSize - 1) / GroupSize : GroupsX;
         var expected = Seeds.Select(s => golden.Get(s, iterations, n)).ToArray();
+        var sGroupsY = (sn + rowWidth - 1) / rowWidth;
+        var sGroupsX = sn < rowWidth ? (sn + GroupSize - 1) / GroupSize : GroupsX;
 
         long errors = 0, rounds = 0;
         double powerSum = 0, maxTemp = 0; var samples = 0;
@@ -68,7 +84,11 @@ public sealed class D3D11StressRunner(GoldenStore golden, uint? elements = null,
         {
             ctx.CSSetUnorderedAccessView(0, dataUav);
             ctx.CSSetUnorderedAccessView(1, resUav);
+            ctx.CSSetUnorderedAccessView(2, srcUav);
+            ctx.CSSetUnorderedAccessView(3, dstUav);
             ctx.CSSetConstantBuffer(0, cb);
+            SetParams(ctx, cb, new Params { Seed = 0, Iter = iterations, N = sn, RowWidth = rowWidth });
+            ctx.CSSetShader(csStreamInit); ctx.Dispatch(sGroupsX, sGroupsY, 1);
             while (sw.Elapsed < duration && !ct.IsCancellationRequested)
             {
                 var seed = Seeds[rounds % Seeds.Length];
@@ -88,6 +108,20 @@ public sealed class D3D11StressRunner(GoldenStore golden, uint? elements = null,
 
                 if (checksum != expected[rounds % Seeds.Length]) errors++;
                 errors += verifyErrors;
+
+                // Bandwidth: the GPU is idle here (we just waited on the result), so wall time ≈ GPU time.
+                SetParams(ctx, cb, new Params { Seed = seed, Iter = iterations, N = sn, RowWidth = rowWidth });
+                var t0 = sw.Elapsed;
+                ctx.CSSetShader(csReset); ctx.Dispatch(1, 1, 1);
+                ctx.CSSetShader(csStream);
+                for (var k = 0; k < StreamPasses; k++) ctx.Dispatch(sGroupsX, sGroupsY, 1);
+                ctx.CSSetShader(csStreamVerify); ctx.Dispatch(sGroupsX, sGroupsY, 1);
+                ctx.CopyResource(staging, result);
+                var sr = ctx.Map(staging, 0, MapMode.Read);
+                errors += (uint)Marshal.ReadInt32(sr.DataPointer, 4);
+                ctx.Unmap(staging, 0);
+                streamSecs += (sw.Elapsed - t0).TotalSeconds;
+                streamBytes += (StreamPasses * 2 + 1) * (double)sn * 16;
                 rounds++;
 
                 if (sw.Elapsed >= nextSample)
@@ -102,8 +136,18 @@ public sealed class D3D11StressRunner(GoldenStore golden, uint? elements = null,
             return new StressResult(false, errors, 0, true, samples > 0 ? powerSum / samples : 0, maxTemp);
         }
         var secs = Math.Max(0.001, sw.Elapsed.TotalSeconds);
-        return new StressResult(!ct.IsCancellationRequested, errors, rounds * (double)n / 1e6 / secs, false,
-            samples > 0 ? powerSum / samples : 0, maxTemp);
+        return new StressResult(!ct.IsCancellationRequested, errors, rounds * (double)n / 1e6 / Math.Max(0.001, secs - streamSecs), false,
+            samples > 0 ? powerSum / samples : 0, maxTemp)
+        {
+            MemBandwidthGBs = streamSecs > 0 ? streamBytes / streamSecs / 1e9 : null,
+        };
+    }
+
+    static void SetParams(ID3D11DeviceContext ctx, ID3D11Buffer cb, Params p)
+    {
+        var m = ctx.Map(cb, 0, MapMode.WriteDiscard);
+        Marshal.StructureToPtr(p, m.DataPointer, false);
+        ctx.Unmap(cb, 0);
     }
 
     static bool IsDeviceLost(Result r) =>

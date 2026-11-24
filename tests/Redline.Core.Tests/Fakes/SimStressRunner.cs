@@ -31,7 +31,11 @@ public sealed class SimStressRunner : IStressRunner
         var plFactor = pl >= 80 ? 1 - (100 - pl) * 0.0005 : 0.99 - (80 - pl) * 0.01;
         var score = spec.StockScore * (1 + core / 10000.0 + mem / 50000.0) * Math.Min(plFactor, 1.0);
         var power = spec.StockPowerW * pl / 100.0 * (1 + volt / 1000.0);
-        return Task.FromResult(new StressResult(true, stable ? 0 : 3, score, false, power, 70));
+        // Memory bandwidth rises with the memory clock; past the peak (GDDR6X error replay) it falls 1.5% per 50 MHz.
+        var bw = spec.MemBandwidthPeakMhz is { } peak && mem > peak
+            ? 1000 * (1 + peak / 10500.0) * (1 - 0.015 * (mem - peak) / 50.0)
+            : 1000 * (1 + mem / 10500.0);
+        return Task.FromResult(new StressResult(true, stable ? 0 : 3, score, false, power, 70) { MemBandwidthGBs = bw });
     }
 }
 

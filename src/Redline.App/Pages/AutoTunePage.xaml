@@ -14,6 +14,9 @@
           <x:String>Performance: the highest stable clocks (saved to Send it)</x:String>
           <x:String>Efficiency: same speed, less heat, noise and power (saved to Whisper)</x:String>
         </RadioButtons>
+        <CheckBox Content="Memory only: keep my current core clock and find the fastest memory setting (about 20–30 min)"
+                  IsChecked="{x:Bind Vm.AutoTune.MemoryOnly, Mode=TwoWay}"
+                  Visibility="{x:Bind Vm.AutoTune.MemoryOnlyAvailable, Mode=OneWay}" />
         <CheckBox Content="Allow raising the power limit above 100%" IsChecked="{x:Bind Vm.AutoTune.AllowPowerAbove100, Mode=TwoWay}"
                   Visibility="{x:Bind Vm.AutoTune.PowerOptInAvailable, Mode=OneWay}" />
         <StackPanel Orientation="Horizontal" Spacing="10">

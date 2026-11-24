@@ -271,4 +271,17 @@ public class AutoTuneStopTests
         Assert.True(f.Gpu.Current.IsFactory);
         Assert.True((await f.State()).Devices[0].Active.IsFactory);
     }
+
+    [Fact]
+    public async Task MemoryOnly_StartsFromWhatsOnTheCard_NotFromTheRequest()
+    {
+        await using var f = new EngineFixture();
+        await f.StartAsync();
+        await f.Send(MessageTypes.StageApply, new StageApplyRequest("gpu0", new TuneSettings(null, 150, 300, null, null), Redline.Core.Safety.SafetyOptions.Default));
+        await f.Send(MessageTypes.ConfirmKeep, new DeviceRequest("gpu0"));
+        var bogus = new Redline.Core.AutoTune.AutoTuneOptions(Redline.Core.AutoTune.AutoTuneMode.Performance, KeepFrom: new TuneSettings(null, 999, null, null, null));
+        await f.Send(MessageTypes.StartAutoTune, new StartAutoTuneRequest("gpu0", bogus, "send-it"));
+        await f.Engine.AutoTuneTask!;
+        Assert.All(f.Stress.Tested.Skip(1), x => Assert.Equal(150, x.CoreOffsetMhz));
+    }
 }

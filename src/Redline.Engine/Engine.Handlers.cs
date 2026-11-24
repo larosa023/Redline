@@ -174,7 +174,11 @@ public sealed partial class Engine
         var target = TryProfile(r.TargetProfileId) ?? throw new KeyNotFoundException($"No profile '{r.TargetProfileId}'.");
         CancelPending(s);
         var cts = _autoTuneCts = new CancellationTokenSource();
-        var opts = r.Options with { AllowPowerAbove100 = r.Options.AllowPowerAbove100 && _settings.Safety.AllowPowerAbove100 };
+        var opts = r.Options with
+        {
+            AllowPowerAbove100 = r.Options.AllowPowerAbove100 && _settings.Safety.AllowPowerAbove100,
+            KeepFrom = r.Options.MemoryOnly ? s.Active : null,      // memory-only keeps what's on the card, never the app's numbers
+        };
         var tuner = new AutoTuner(s.Dev, _stress, _journal, _settings.Safety);
         var progress = new Progress(p => Emit(MessageTypes.AutoTuneProgress, new AutoTuneProgressEvent(s.Dev.Id, p, null)));
         var run = Task.Run(() => tuner.RunAsync(opts, progress, cts.Token));

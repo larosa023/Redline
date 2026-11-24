@@ -158,6 +158,8 @@ public sealed class ShellViewModel : ObservableObject
     {
         get
         {
+            if (State?.AutoTuneRunning == true)
+                return string.IsNullOrEmpty(AutoTune.CurrentLabel) ? "Auto-tune is testing" : $"Auto-tune is testing · {AutoTune.CurrentLabel}";
             if (Device is not { } d) return Copy.StatusFactory;
             if (d.ActiveProfileId == Profile.FactoryId || (d.ActiveProfileId is null && d.Active.IsFactory)) return Copy.StatusFactory;
             if (d.ActiveProfileId is { } id && State!.Profiles.FirstOrDefault(p => p.Id == id) is { } p) return Copy.StatusProfile(p.Name);
@@ -242,7 +244,7 @@ public sealed class ShellViewModel : ObservableObject
                 Tune.OnTick(k);
                 if (k.Done) _ = RefreshAsync();
                 break;
-            case MessageTypes.AutoTuneProgress when m.PayloadAs<AutoTuneProgressEvent>() is { } a: AutoTune.OnProgress(a); break;
+            case MessageTypes.AutoTuneProgress when m.PayloadAs<AutoTuneProgressEvent>() is { } a: AutoTune.OnProgress(a); OnPropertyChanged(nameof(Status)); break;
             case MessageTypes.GuardAction when m.PayloadAs<GuardActionEvent>() is { } g:
                 AddToast(new ToastItem("Temperature guard", g.Message, "warning"));
                 _ = RefreshAsync();

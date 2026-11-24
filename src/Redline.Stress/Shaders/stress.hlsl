@@ -1,6 +1,8 @@
 // Must match Redline.Core.Stress.StressKernel.Element exactly.
 RWStructuredBuffer<uint> Data : register(u0);
 RWStructuredBuffer<uint> Result : register(u1);   // [0] checksum, [1] verify errors
+RWStructuredBuffer<uint4> Src : register(u2);     // memory-bandwidth phase
+RWStructuredBuffer<uint4> Dst : register(u3);
 cbuffer Params : register(b0) { uint Seed; uint Iter; uint N; uint RowWidth; };
 
 uint Element(uint i)
@@ -37,4 +39,36 @@ void Reset(uint3 id : SV_DispatchThreadID)
 {
     Result[0] = 0;
     Result[1] = 0;
+}
+
+// Memory-bandwidth phase: stream a large buffer through video memory (one read + one write per element).
+// Too-high memory clocks on GDDR6X show up as lower bandwidth (the card retries its own errors), or as errors here.
+uint4 Pattern(uint i)
+{
+    uint b = i * 2654435761u;
+    return uint4(b, b ^ 0xA5A5A5A5u, b + 0x9E3779B9u, ~b);
+}
+
+[numthreads(256, 1, 1)]
+void StreamInit(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.y * RowWidth + id.x;
+    if (i >= N) return;
+    Src[i] = Pattern(i);
+}
+
+[numthreads(256, 1, 1)]
+void Stream(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.y * RowWidth + id.x;
+    if (i >= N) return;
+    Dst[i] = Src[i] ^ Seed;
+}
+
+[numthreads(256, 1, 1)]
+void StreamVerify(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.y * RowWidth + id.x;
+    if (i >= N) return;
+    if (any(Dst[i] != (Pattern(i) ^ Seed))) InterlockedAdd(Result[1], 1u);
 }

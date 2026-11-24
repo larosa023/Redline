@@ -4,7 +4,7 @@ namespace Redline.Core.Sim;
 
 /// <summary>Behaviour of a simulated GPU: what it allows and where it becomes unstable.</summary>
 public sealed record SimGpuSpec(string Name, Capabilities Caps, int StableCoreMax, int StableMemMax, int MinStableVoltageMv,
-    double StockScore, double StockPowerW, IReadOnlyDictionary<Control, int>? DriverClamp = null);
+    double StockScore, double StockPowerW, IReadOnlyDictionary<Control, int>? DriverClamp = null, int? MemBandwidthPeakMhz = null);
 
 /// <summary>In-memory GPU used for development, tests and demo mode.</summary>
 public sealed class SimGpuDevice(SimGpuSpec spec, string id = "sim-0") : IGpuDevice

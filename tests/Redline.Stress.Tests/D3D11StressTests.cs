@@ -20,6 +20,7 @@ public class D3D11StressTests
         Assert.Equal(0, r.Errors);
         Assert.True(r.Score > 0);
         Assert.False(r.DriverReset);
+        Assert.True(r.MemBandwidthGBs > 0, $"bandwidth {r.MemBandwidthGBs}");
     }
 
     [Fact]

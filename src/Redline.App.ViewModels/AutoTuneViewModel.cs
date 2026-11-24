@@ -12,7 +12,7 @@ public sealed class AutoTuneViewModel : ObservableObject
 {
     readonly ShellViewModel _shell;
     AutoTuneMode _mode = AutoTuneMode.Performance;
-    bool _allowPower, _running;
+    bool _allowPower, _running, _memoryOnly;
     string _target = Profile.SendItId;
     double _fraction;
     string _label = "", _remaining = "", _result = "";
@@ -34,6 +34,15 @@ public sealed class AutoTuneViewModel : ObservableObject
         set { if (SetProperty(ref _mode, value)) Target = value == AutoTuneMode.Performance ? Profile.SendItId : Profile.WhisperId; }
     }
 
+    /// <summary>Keep the current core clock and only look for the fastest memory setting (saved to Send it).</summary>
+    public bool MemoryOnly
+    {
+        get => _memoryOnly && MemoryOnlyAvailable;
+        set { if (SetProperty(ref _memoryOnly, value) && value) { _mode = AutoTuneMode.Performance; Target = Profile.SendItId; OnPropertyChanged(nameof(Mode)); } }
+    }
+
+    public bool MemoryOnlyAvailable => _shell.Device is { } d && d.Active.CoreOffsetMhz is > 0 && d.Caps.Supports(Redline.Core.Gpu.Control.MemoryOffset);
+
     public bool AllowPowerAbove100 { get => _allowPower; set => SetProperty(ref _allowPower, value); }
     public bool PowerOptInAvailable => _shell.State?.Settings.Safety.AllowPowerAbove100 == true && _mode == AutoTuneMode.Performance;
     public string Target { get => _target; set => SetProperty(ref _target, value); }
@@ -47,6 +56,8 @@ public sealed class AutoTuneViewModel : ObservableObject
     {
         Running = _shell.State?.AutoTuneRunning == true;
         OnPropertyChanged(nameof(PowerOptInAvailable));
+        OnPropertyChanged(nameof(MemoryOnlyAvailable));
+        OnPropertyChanged(nameof(MemoryOnly));
         StartCommand.NotifyCanExecuteChanged();
     }
 
@@ -54,7 +65,9 @@ public sealed class AutoTuneViewModel : ObservableObject
     {
         if (_shell.Device is not { } d) return;
         Steps.Clear(); ResultText = ""; Fraction = 0;
-        var opts = new AutoTuneOptions(_mode, AllowPowerAbove100: _allowPower && PowerOptInAvailable);
+        var opts = MemoryOnly
+            ? new AutoTuneOptions(AutoTuneMode.Performance, KeepFrom: d.Active)
+            : new AutoTuneOptions(_mode, AllowPowerAbove100: _allowPower && PowerOptInAvailable);
         if (await _shell.SendAsync(MessageTypes.StartAutoTune, new StartAutoTuneRequest(d.Id, opts, _target)) is not null) Running = true;
     }
 

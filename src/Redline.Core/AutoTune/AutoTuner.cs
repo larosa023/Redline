@@ -54,6 +54,12 @@ public sealed class AutoTuner(IGpuDevice device, IStressRunner stress, SafeStart
     {
         var o = run.O;
         var state = new WalkState(TuneSettings.Factory);
+        if (o.KeepFrom is { } keep)
+        {
+            state = new WalkState(keep with { MemoryOffsetMhz = null });
+            run.LastGood = state.Settings;
+            return await WalkUpAsync(run, state, caps, Control.MemoryOffset, o.MemStepMhz, o.MemMarginSteps, "Memory", ct);
+        }
         if (o.AllowPowerAbove100 && caps.Range(Control.PowerLimit) is { } pr)
         {
             var opts = safety with { AllowPowerAbove100 = true };
@@ -114,16 +120,24 @@ public sealed class AutoTuner(IGpuDevice device, IStressRunner stress, SafeStart
         var safe = SafetyPolicy.SafeRange(c, driver, advanced: false);
         step = Math.Max(step, driver.Step);
         var lastPass = 0;
+        int? fastest = null;            // memory: the offset with the highest measured bandwidth
+        double bestBw = 0;
         run.Walking = (c, step, marginSteps);
         for (var v = step; v <= safe.Max; v += step)
         {
             var s = st.Settings.With(c, v);
             var r = await TestAsync(run, $"{label} +{v} MHz", s, run.O.Step, ct);
             if (!r.Stable) break;
+            if (c == Control.MemoryOffset && r.MemBandwidthGBs is { } bw)
+            {
+                // Past its best point GDDR6X corrects its own errors and gets slower instead of failing.
+                if (bw < bestBw * (1 - AutoTuneOptions.BandwidthDropTolerance)) break;
+                if (bw > bestBw) { bestBw = bw; fastest = v; }
+            }
             lastPass = v;
         }
         run.Walking = null;
-        var result = Math.Max(0, lastPass - marginSteps * step);
+        var result = Math.Max(0, Math.Min(lastPass - marginSteps * step, fastest ?? int.MaxValue));
         var settings = st.Settings.With(c, result == 0 ? null : result);
         run.LastGood = settings;
         var steps = new Dictionary<Control, int>(st.Steps) { [c] = step };
@@ -219,7 +233,7 @@ public sealed class AutoTuner(IGpuDevice device, IStressRunner stress, SafeStart
     {
         var n = 2; // baseline + final
         foreach (var (c, step) in new[] { (Control.CoreOffset, o.CoreStepMhz), (Control.MemoryOffset, o.MemStepMhz) })
-            if (caps.Range(c) is { } d)
+            if (caps.Range(c) is { } d && !(o.MemoryOnly && c == Control.CoreOffset))
                 n += Math.Max(1, SafetyPolicy.SafeRange(c, d, false).Max / Math.Max(step, d.Step) / 2);
         return n;
     }

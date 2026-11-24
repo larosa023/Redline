@@ -32,6 +32,30 @@ public class PerformanceTests : IDisposable
     }
 
     [Fact]
+    public async Task Memory_StopsWhereBandwidthPeaks_NotAtTheCeiling()
+    {
+        // GDDR6X corrects its own errors: past its best point it gets slower instead of failing.
+        var spec = TestGpus.Spec(coreMax: 500, stableCore: 180, memMax: 6000, stableMem: 5000) with { MemBandwidthPeakMhz = 1500 };
+        var (t, _, stress, _) = Make(spec);
+        var r = await t.RunAsync(Perf, null, default);
+        Assert.Equal(AutoTuneOutcome.Completed, r.Outcome);
+        Assert.Equal(1450, r.Best.MemoryOffsetMhz);                                   // best point, one step of margin
+        Assert.True(stress.Tested.Max(x => x.MemoryOffsetMhz ?? 0) <= 1550);          // stopped right after the drop
+    }
+
+    [Fact]
+    public async Task MemoryOnly_KeepsTheCurrentCore_AndTestsOnlyMemory()
+    {
+        var (t, dev, stress, _) = Make(TestGpus.Spec(coreMax: 500, stableCore: 180, memMax: 2000, stableMem: 1100));
+        var r = await t.RunAsync(Perf with { KeepFrom = new TuneSettings(null, 150, 2300, null, null) }, null, default);
+        Assert.Equal(AutoTuneOutcome.Completed, r.Outcome);
+        Assert.Equal(150, r.Best.CoreOffsetMhz);
+        Assert.Equal(1050, r.Best.MemoryOffsetMhz);
+        Assert.All(stress.Tested.Skip(1), x => Assert.Equal(150, x.CoreOffsetMhz));   // after the stock baseline, core never moves
+        Assert.Equal(r.Best, dev.Current);
+    }
+
+    [Fact]
     public async Task FindsStableMemory_MinusMargin()
     {
         var (t, _, _, _) = Make(TestGpus.Spec(coreMax: 500, stableCore: 180, memMax: 2000, stableMem: 1100));
