@@ -106,12 +106,12 @@ public class ViewModelTests
     [Fact]
     public async Task HelperMissing_ShowsRepair()
     {
-        var s = new ShellViewModel(new FakeHelper { Available = false }, FakeHelper.Inline);
+        var s = new ShellViewModel(new FakeHelper { Available = false }, FakeHelper.Inline) { Delay = HelperRecoveryTests.InstantThenNever(0) };
         await s.LoadAsync();
         Assert.True(s.HelperMissing);
         var asked = false;
-        s.RepairRequested += () => asked = true;
-        s.RepairCommand.Execute(null);
+        s.Installer = () => { asked = true; return Task.FromResult(false); };
+        await s.RepairCommand.ExecuteAsync();
         Assert.True(asked);
     }
 

@@ -68,7 +68,11 @@
       <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14" MaxWidth="520">
         <TextBlock Text="Let's set up Redline Helper" FontFamily="{StaticResource RlDisplay}" FontSize="30" FontWeight="SemiBold" Foreground="{StaticResource RlText}" TextWrapping="Wrap" />
         <TextBlock Text="Redline uses a small background helper to read and tune your hardware safely. Setting it up takes one admin prompt. If you've done this before, the helper may have stopped; this fixes it." Foreground="{StaticResource RlMuted}" FontSize="15" TextWrapping="Wrap" />
-        <StackPanel Orientation="Horizontal" Spacing="10">
+        <StackPanel Orientation="Horizontal" Spacing="12" Visibility="{x:Bind Vm.Repairing, Mode=OneWay}">
+          <ProgressRing IsActive="{x:Bind Vm.Repairing, Mode=OneWay}" Width="24" Height="24" />
+          <TextBlock Text="Starting Redline Helper… this can take up to a minute the first time." Foreground="{StaticResource RlText}" FontSize="15" TextWrapping="Wrap" VerticalAlignment="Center" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="10" Visibility="{x:Bind Vm.NotRepairing, Mode=OneWay}">
           <Button Content="Set up helper" Command="{x:Bind Vm.RepairCommand}" MinHeight="44" Padding="20,10" Background="{StaticResource RlAccent}" Foreground="{StaticResource RlOnAccent}" FontWeight="Bold" CornerRadius="14" />
           <Button Content="Try again" Command="{x:Bind Vm.RetryCommand}" MinHeight="44" Padding="20,10" CornerRadius="14" />
         </StackPanel>

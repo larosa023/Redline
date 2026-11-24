@@ -29,11 +29,11 @@ public sealed class ShellViewModel : ObservableObject
         Cpu = new CpuViewModel(this);
         Tools = new ToolsViewModel(this);
         Overlay = new OverlayViewModel(this);
-        RepairCommand = new RelayCommand(() => RepairRequested?.Invoke());
+        RepairCommand = new AsyncRelayCommand(RepairAsync);
         RetryCommand = new AsyncRelayCommand(LoadAsync);
         SetThemeCommand = new ParamCommand<string>(k => _ = SetThemeAsync(k));
         _helper.EventReceived += m => _post(() => OnEvent(m));
-        _helper.Disconnected += () => _post(() => HelperMissing = true);
+        _helper.Disconnected += () => _post(OnHelperLost);
     }
 
     public HomeViewModel Home { get; }
@@ -45,7 +45,7 @@ public sealed class ShellViewModel : ObservableObject
     public CpuViewModel Cpu { get; }
     public ToolsViewModel Tools { get; }
     public OverlayViewModel Overlay { get; }
-    public RelayCommand RepairCommand { get; }
+    public AsyncRelayCommand RepairCommand { get; }
     public AsyncRelayCommand RetryCommand { get; }
     public ParamCommand<string> SetThemeCommand { get; }
 
@@ -61,8 +61,79 @@ public sealed class ShellViewModel : ObservableObject
     }
     public ObservableCollection<ToastItem> Toasts { get; } = new();
 
-    /// <summary>Raised when the user asks to repair the helper (the app runs the elevated installer).</summary>
-    public event Action? RepairRequested;
+    /// <summary>Runs the elevated helper installer (one admin prompt). Returns false if it didn't finish (e.g. the prompt was declined).</summary>
+    public Func<Task<bool>>? Installer { get; set; }
+
+    /// <summary>Waiting between connection attempts. Replaceable for tests.</summary>
+    public Func<TimeSpan, Task> Delay { get; set; } = Task.Delay;
+
+    /// <summary>How long to wait for a freshly installed helper to start (it loads GPU and sensor drivers first).</summary>
+    public static readonly TimeSpan HelperStartWait = TimeSpan.FromSeconds(60);
+    static readonly TimeSpan RetryEvery = TimeSpan.FromSeconds(1);
+    static readonly TimeSpan ReconnectEvery = TimeSpan.FromSeconds(3);
+
+    bool _repairing, _reconnecting;
+
+    /// <summary>The helper is being installed and started; the setup screen shows progress instead of buttons.</summary>
+    public bool Repairing { get => _repairing; private set { if (SetProperty(ref _repairing, value)) OnPropertyChanged(nameof(NotRepairing)); } }
+    public bool NotRepairing => !_repairing;
+
+    async Task RepairAsync()
+    {
+        if (Installer is null) return;
+        Repairing = true;
+        try
+        {
+            if (!await Installer())
+            {
+                LastError = Copy.HelperSetupDidNotFinish;
+                return;
+            }
+            // The new helper can take several seconds to load drivers before it answers. Keep trying instead of
+            // showing the setup screen again (clicking Set up again would restart it and start the wait over).
+            for (var waited = TimeSpan.Zero; ; waited += RetryEvery)
+            {
+                await LoadAsync();
+                if (!HelperMissing) return;
+                if (waited >= HelperStartWait) break;
+                await Delay(RetryEvery);
+            }
+            LastError = Copy.HelperDidNotStart;
+        }
+        finally
+        {
+            Repairing = false;
+            if (HelperMissing) StartReconnecting();
+        }
+    }
+
+    void OnHelperLost()
+    {
+        HelperMissing = true;
+        StartReconnecting();
+    }
+
+    /// <summary>While the helper is unreachable, quietly try again every few seconds (e.g. Windows still starting it).</summary>
+    void StartReconnecting()
+    {
+        if (_reconnecting || Repairing) return;
+        _reconnecting = true;
+        _ = ReconnectLoopAsync();
+    }
+
+    async Task ReconnectLoopAsync()
+    {
+        try
+        {
+            while (HelperMissing && !Repairing)
+            {
+                await Delay(ReconnectEvery);
+                if (!HelperMissing || Repairing) break;
+                await LoadCoreAsync();
+            }
+        }
+        finally { _reconnecting = false; }
+    }
 
     public HelperState? State { get => _state; private set { if (SetProperty(ref _state, value)) OnStateChanged(); } }
     public bool HelperMissing { get => _helperMissing; private set => SetProperty(ref _helperMissing, value); }
@@ -93,6 +164,12 @@ public sealed class ShellViewModel : ObservableObject
     }
 
     public async Task LoadAsync()
+    {
+        await LoadCoreAsync();
+        if (HelperMissing) StartReconnecting();
+    }
+
+    async Task LoadCoreAsync()
     {
         try
         {

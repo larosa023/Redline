@@ -23,10 +23,13 @@ public sealed class HelperClient(string pipeName = PipeProtocol.PipeName) : IHel
 
     public async Task ConnectAsync(TimeSpan timeout)
     {
-        if (_pipe is not null) await _pipe.DisposeAsync();
-        _pipe = await PipeClient.ConnectAsync(pipeName, timeout);
-        _pipe.EventReceived += m => EventReceived?.Invoke(m);
-        _pipe.Disconnected += () => Disconnected?.Invoke();
+        var old = _pipe;
+        _pipe = null;
+        if (old is not null) await old.DisposeAsync();   // closing the old pipe on purpose is not a lost helper
+        var pipe = await PipeClient.ConnectAsync(pipeName, timeout);
+        pipe.EventReceived += m => { if (ReferenceEquals(_pipe, pipe)) EventReceived?.Invoke(m); };
+        pipe.Disconnected += () => { if (ReferenceEquals(_pipe, pipe)) Disconnected?.Invoke(); };
+        _pipe = pipe;
     }
 
     public Task<IpcMessage> RequestAsync(string type, object? payload) =>

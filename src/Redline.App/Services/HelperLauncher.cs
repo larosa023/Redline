@@ -32,8 +32,7 @@ public sealed class HelperLauncher(bool demo) : IAsyncDisposable
         {
             using var p = Process.Start(new ProcessStartInfo(HelperExe, $"--install \"{Path.GetDirectoryName(HelperExe)}\"") { UseShellExecute = true, Verb = "runas" })!;
             await p.WaitForExitAsync();
-            await Task.Delay(1500);
-            return p.ExitCode == 0;
+            return p.ExitCode == 0;   // the app then waits for the helper to answer (it can take a while to load drivers)
         }
         catch (Win32Exception) { return false; }   // user said no to the prompt
     }

@@ -8,6 +8,8 @@ public static class Copy
     public static string StatusProfile(string name) => $"{name} is active";
 
     public const string HelperMissingTitle = "Redline Helper isn't running";
+    public const string HelperSetupDidNotFinish = "Helper setup didn't finish. If you saw an admin prompt, choose Yes. Details: C:\\ProgramData\\Redline\\install.log";
+    public const string HelperDidNotStart = "The helper was set up but hasn't answered yet. Redline will keep trying on its own. Details: C:\\ProgramData\\Redline\\install.log";
     public const string HelperMissingBody = "Redline needs its background helper to read and tune your hardware. Repair sets it up again (one admin prompt).";
 
     public const string ChipCruising = "Cruising";
