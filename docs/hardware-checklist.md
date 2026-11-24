@@ -26,3 +26,15 @@ Run on a real PC before each release. Note GPU, driver version and result for ea
 
 - [ ] Same list, plus: Intel shows the overclocking waiver before the first tune.
 - [ ] Send the "Send report" zip with results.
+
+## AMD Radeon and Intel Arc (needs volunteers)
+
+Redline's AMD and Intel support was built from the vendors' SDK headers and tested with simulated drivers only.
+Ask testers to use the "Hardware report" issue form and attach Settings → Create report.
+
+- [ ] AMD RDNA2/3/4: card appears; Home readings match AMD Software (temp, hotspot, clock, board power, fan RPM)
+- [ ] AMD: power limit, core (max clock) offset, memory offset and voltage offset apply and read back; Back to factory works
+- [ ] AMD: card already tuned in AMD Software → first Apply resets to factory once, then applies
+- [ ] Intel Arc: card appears without the integrated GPU; Tune shows Intel's terms; nothing applies before "I accept"
+- [ ] Intel: after accepting, power / core / voltage offsets apply and read back; acceptance survives a reboot
+- [ ] Both: any control the driver reports oddly is simply missing (never wrong values)

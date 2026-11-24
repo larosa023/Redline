@@ -64,10 +64,13 @@ public static partial class ReportBuilder
     public static string Redact(string text, ReportRedaction r)
     {
         text = UserFolder().Replace(text, m => m.Groups[1].Value + "<user>");
-        foreach (var u in r.UserNames.Where(n => n.Length >= 2)) text = Regex.Replace(text, Regex.Escape(u), "<user>", RegexOptions.IgnoreCase);
-        foreach (var m in r.MachineNames.Where(n => n.Length >= 2)) text = Regex.Replace(text, Regex.Escape(m), "<pc>", RegexOptions.IgnoreCase);
+        // PC names first: they often contain the user name ("AL-PC"). Whole words only, so "Al" leaves "install" alone.
+        foreach (var m in r.MachineNames.Where(n => n.Length >= 2)) text = Word(m).Replace(text, "<pc>");
+        foreach (var u in r.UserNames.Where(n => n.Length >= 2)) text = Word(u).Replace(text, "<user>");
         return text;
     }
+
+    static Regex Word(string w) => new($@"(?<![\w]){Regex.Escape(w)}(?![\w])", RegexOptions.IgnoreCase);
 
     // C:\Users\name or C:\\Users\\name (JSON-escaped) → keep the prefix, replace the name.
     [GeneratedRegex(@"(?i)(\\{1,2}Users\\{1,2})(?!<user>)[^\\/""\r\n]+")]

@@ -13,7 +13,8 @@ public sealed unsafe class IgclApi : IIgclApi, IDisposable
     // igcl_api.h (x64) sizes and offsets.
     const int InitArgsSize = 36, InitVersion = 4, InitAppVersion = 8, InitFlags = 12;
     const int PropsSize = 320, PropsDeviceIdPtr = 8, PropsDeviceIdSize = 16, PropsDeviceType = 20, PropsDriverVersion = 32,
-        PropsVendor = 64, PropsName = 88, NameLen = 100, PropsAdapterFlags = 188;
+        PropsVendor = 64, PropsDeviceId = 68, PropsName = 88, NameLen = 100, PropsAdapterFlags = 188,
+        PropsSubsys = 196, PropsSubsysVendor = 198, PropsBdf = 200;
     const int OcSize = 440, OcSupported = 5, OcGpuFreq = 8, OcGpuVolt = 56, OcVramFreq = 104, OcPower = 200;
     const int CtlSupported = 0, CtlUnits = 4, CtlMin = 8, CtlMax = 16, CtlStep = 24, CtlDefault = 32;
     const int TelSize = 1024, TelTime = 8, TelGpuEnergy = 32, TelGpuVolt = 56, TelClock = 80, TelTemp = 104, TelActivity = 128,
@@ -79,7 +80,9 @@ public sealed unsafe class IgclApi : IIgclApi, IDisposable
         var name = System.Text.Encoding.ASCII.GetString(nameBytes[..Math.Max(0, nameBytes.IndexOf((byte)0) is var z and >= 0 ? z : NameLen)]).Trim();
         var dv = *(ulong*)(p + PropsDriverVersion);
         var driver = $"{(dv >> 48) & 0xFFFF}.{(dv >> 32) & 0xFFFF}.{(dv >> 16) & 0xFFFF}.{dv & 0xFFFF}";
-        var id = Convert.ToHexString(new ReadOnlySpan<byte>(luid, 8)).ToLowerInvariant();
+        // Stable across reboots (the LUID is not): PCI ids plus bus/device/function.
+        var id = $"{*(uint*)(p + PropsVendor):x4}-{*(uint*)(p + PropsDeviceId):x4}-{*(ushort*)(p + PropsSubsysVendor):x4}{*(ushort*)(p + PropsSubsys):x4}"
+            + $"-{p[PropsBdf]:x2}.{p[PropsBdf + 1]:x2}.{p[PropsBdf + 2]:x}";
         return new IgclGpuInfo(index, name.Length > 0 ? name : "Intel Arc", driver, id);
     }
 

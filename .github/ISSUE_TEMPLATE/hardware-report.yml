@@ -1,0 +1,40 @@
+name: Hardware report
+description: Tell us how Redline works on your graphics card (especially AMD Radeon and Intel Arc).
+labels: [hardware-report]
+body:
+  - type: input
+    id: gpu
+    attributes:
+      label: Graphics card
+      placeholder: e.g. AMD Radeon RX 7900 XTX, Intel Arc A770 16GB
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Redline version
+      description: Settings shows it at the bottom.
+      placeholder: 0.9.0-beta.6
+    validations:
+      required: true
+  - type: checkboxes
+    id: works
+    attributes:
+      label: What worked
+      options:
+        - label: Home shows temperature, clock, power and fan
+        - label: Power limit slider applied and read back
+        - label: Core clock slider applied and read back
+        - label: Memory clock slider applied and read back
+        - label: Keep-or-revert undid a change I didn't keep
+        - label: Back to factory restored the card
+  - type: textarea
+    id: notes
+    attributes:
+      label: What went wrong (if anything)
+      description: Anything odd, wrong numbers, errors or crashes.
+  - type: markdown
+    attributes:
+      value: |
+        **Please attach a report:** in Redline open Settings → Create report, then drag the zip from your Downloads folder into this box.
+        Your user name and PC name are removed from it.

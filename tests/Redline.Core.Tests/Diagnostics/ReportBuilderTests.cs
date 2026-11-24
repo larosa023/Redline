@@ -62,6 +62,13 @@ public class ReportBuilderTests
     }
 
     [Fact]
+    public void ShortUserName_OnlyWholeWordsReplaced()
+    {
+        var text = ReportBuilder.Redact("Al started the install on AL-PC", new ReportRedaction(["Al"], ["AL-PC"]));
+        Assert.Equal("<user> started the install on <pc>", text);
+    }
+
+    [Fact]
     public void BigLog_KeepsOnlyTheEnd()
     {
         using var dir = new TempDir();
