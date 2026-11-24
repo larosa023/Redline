@@ -48,6 +48,18 @@ jobs:
             Where-Object { $_.ProviderName -in '.NET Runtime','Application Error','Windows Error Reporting' } |
             ForEach-Object { Write-Host "== EVENT $($_.ProviderName) $($_.Id)"; Write-Host $_.Message }
           if ($alive) { Stop-Process -Id $p.Id -Force }
+          # Screen tour: every page, dark and light theme, saved by the app itself.
+          $tour = Join-Path $env:RUNNER_TEMP "tour"
+          $env:REDLINE_TOUR = $tour
+          $t = Start-Process -FilePath smoke/Redline.exe -ArgumentList "--demo" -PassThru
+          $deadline = (Get-Date).AddSeconds(120)
+          while (-not (Test-Path (Join-Path $tour "done.txt")) -and (Get-Date) -lt $deadline -and -not $t.HasExited) { Start-Sleep -Seconds 2 }
+          if (-not $t.HasExited) { Stop-Process -Id $t.Id -Force }
+          Get-ChildItem $tour -Filter *.error.txt -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "TOUR-ERROR $($_.Name)"; Get-Content $_.FullName }
+          Get-ChildItem $tour -Filter *.jpg -ErrorAction SilentlyContinue | ForEach-Object {
+            $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($_.FullName))
+            for ($i = 0; $i -lt $b64.Length; $i += 4000) { Write-Host ("TOUR:" + $_.BaseName + ":" + $b64.Substring($i, [Math]::Min(4000, $b64.Length - $i))) }
+          }
           Get-Process Redline.Helper -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $alive) { throw "Redline.exe exited during startup (exit code $($p.ExitCode))" }
       - name: Upload test results

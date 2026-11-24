@@ -52,6 +52,8 @@ public sealed partial class MainWindow : Window
         foreach (var name in _pages.Keys) AddNav(name);
         Navigate("Home");
         BuildSwatches();
+        if (Environment.GetEnvironmentVariable("REDLINE_TOUR") is { Length: > 0 } tour)
+            DispatcherQueue.TryEnqueue(async () => await ScreenTour.RunAsync(tour, _pages.Keys.ToList(), Navigate, PageHost, Root));
 
         Vm.PropertyChanged += OnVmChanged;
         Vm.Toasts.CollectionChanged += (_, _) => RenderToasts();
