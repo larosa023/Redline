@@ -3,6 +3,7 @@ using Xunit;
 
 namespace Redline.Engine.Tests;
 
+[Collection("CpuHeavy")]
 public class PipeTests
 {
     [Fact]

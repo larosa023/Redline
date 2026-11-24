@@ -247,6 +247,8 @@ public class EngineTests : IAsyncLifetime
     }
 }
 
+// Full simulated auto-tunes are CPU-heavy; keep them from running alongside the timing-sensitive pipe tests.
+[Collection("CpuHeavy")]
 public class AutoTuneStopTests
 {
     [Fact]
