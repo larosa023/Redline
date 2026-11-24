@@ -22,7 +22,7 @@ public static class Composition
     {
         IEnumerable<IGpuBackend> backends = demo
             ? [new SimGpuBackend(new SimGpuDevice(new SimGpuSpec("Redline Demo GPU", DemoCaps(), 180, 1100, -60, 1000, 350), "demo-0"))]
-            : [new NvidiaBackend(new NvmlApi()), new AmdBackend(Own(new AdlxApi(), owned)), new IntelBackend(Own(new IgclApi(), owned))];
+            : RealBackends(owned);
         LhmCpuMonitor cpu;
         using (Redline.Core.Diagnostics.HelperLog.Time("open CPU/sensor monitor")) { cpu = new LhmCpuMonitor(); owned.Add(cpu); }
         IProcessWatcher procs = (IProcessWatcher?)TryCreate(() => new WmiProcessWatcher(), owned) ?? new NoProcesses();
@@ -31,6 +31,18 @@ public static class Composition
         return new Engine.Engine(new EngineOptions(dataDir, HelperVersion: Version), backends,
             new D3D11StressRunner(new GoldenStore(dataDir), forceWarp: demo), new PowrProfPowerPlan(), cpu, procs, signals,
             TimeProvider.System, PawnIoDetector.IsInstalled, extras: demo ? null : cpu, frames: frames);
+    }
+
+    static IEnumerable<IGpuBackend> RealBackends(List<IDisposable> owned)
+    {
+        var adapters = DisplayAdapters.List();
+        var plan = GpuInventory.Plan(adapters);
+        Redline.Core.Diagnostics.HelperLog.Write($"adapters: {string.Join("; ", adapters.Select(a => a.Name))} → nvidia={plan.Nvidia} amd={plan.Amd} intel={plan.Intel}");
+        var list = new List<IGpuBackend>();
+        if (plan.Nvidia) list.Add(new NvidiaBackend(new NvmlApi()));
+        if (plan.Amd) list.Add(new AmdBackend(Own(new AdlxApi(), owned)));
+        if (plan.Intel) list.Add(new IntelBackend(Own(new IgclApi(), owned)));
+        return list;
     }
 
     static T Own<T>(T t, List<IDisposable> owned) where T : IDisposable { owned.Add(t); return t; }

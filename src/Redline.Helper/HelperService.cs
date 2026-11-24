@@ -19,12 +19,16 @@ public sealed class HelperService(string dataDir, bool demo, string pipeName) : 
         try
         {
             Directory.CreateDirectory(dataDir);
-            using (Redline.Core.Diagnostics.HelperLog.Time("create engine")) _engine = Composition.CreateEngine(dataDir, demo, _owned);
-            using (Redline.Core.Diagnostics.HelperLog.Time("start engine")) await _engine.StartAsync(stoppingToken);
-            _server = new PipeServer(pipeName, _engine, demo ? null : InstallLayout.CreatePipe);
+            // Open the pipe first: the app connects right away and its requests wait for the engine below.
+            var gate = new StartupGate();
+            _server = new PipeServer(pipeName, gate, demo ? null : InstallLayout.CreatePipe);
             _server.AcceptError += e => Redline.Core.Diagnostics.HelperLog.Write($"pipe: {e.Message}");
             _server.Start();
-            Redline.Core.Diagnostics.HelperLog.Write("ready: pipe open");
+            Redline.Core.Diagnostics.HelperLog.Write("pipe open");
+            using (Redline.Core.Diagnostics.HelperLog.Time("create engine")) _engine = Composition.CreateEngine(dataDir, demo, _owned);
+            using (Redline.Core.Diagnostics.HelperLog.Time("start engine")) await _engine.StartAsync(stoppingToken);
+            gate.Ready(_engine);
+            Redline.Core.Diagnostics.HelperLog.Write("ready");
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
