@@ -23,7 +23,8 @@ public static class Composition
         IEnumerable<IGpuBackend> backends = demo
             ? [new SimGpuBackend(new SimGpuDevice(new SimGpuSpec("Redline Demo GPU", DemoCaps(), 180, 1100, -60, 1000, 350), "demo-0"))]
             : [new NvidiaBackend(new NvmlApi()), new AmdBackend(Own(new AdlxApi(), owned)), new IntelBackend(Own(new IgclApi(), owned))];
-        var cpu = new LhmCpuMonitor(); owned.Add(cpu);
+        LhmCpuMonitor cpu;
+        using (Redline.Core.Diagnostics.HelperLog.Time("open CPU/sensor monitor")) { cpu = new LhmCpuMonitor(); owned.Add(cpu); }
         IProcessWatcher procs = (IProcessWatcher?)TryCreate(() => new WmiProcessWatcher(), owned) ?? new NoProcesses();
         IStabilitySignals signals = (IStabilitySignals?)TryCreate(() => new EventLogStabilitySignals(), owned) ?? new NoSignals();
         var frames = new PresentMonFrameSource(Path.Combine(AppContext.BaseDirectory, "PresentMon.exe")); owned.Add(frames);

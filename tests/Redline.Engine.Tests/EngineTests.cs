@@ -326,4 +326,16 @@ public class AutoTuneStopTests
         Assert.NotEqual(underTest, f.Gpu.Current.CoreOffsetMhz);
         Assert.True(f.Gpu.Current.CoreOffsetMhz < underTest);
     }
+
+    [Fact]
+    public async Task StateAfterAutoTune_SaysItIsNoLongerRunning()
+    {
+        await using var f = new EngineFixture();
+        await f.StartAsync();
+        await f.Send(MessageTypes.StartAutoTune, new StartAutoTuneRequest("gpu0", PerfOpts, "send-it"));
+        await f.Engine.AutoTuneTask!;
+        IpcMessage last;
+        lock (f.Events) last = f.Events.Last(m => m.Type == MessageTypes.State);
+        Assert.False(last.PayloadAs<HelperState>()!.AutoTuneRunning);
+    }
 }

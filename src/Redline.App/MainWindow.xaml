@@ -48,7 +48,16 @@
           <Button Grid.Column="2" Content="Revert" Command="{x:Bind Vm.Tune.RevertCommand}" MinHeight="40" MinWidth="88" CornerRadius="12" />
         </Grid>
       </Border>
-      <InfoBar Severity="Error" IsOpen="True" IsClosable="False" Message="{x:Bind Vm.LastError, Mode=OneWay}" Visibility="{x:Bind local:Fmt.VisText(Vm.LastError), Mode=OneWay}" />
+      <!-- Our own error bar (InfoBar's text follows the Windows theme and could be unreadable on Redline's themes). -->
+      <Border Background="{StaticResource RlSurface}" BorderBrush="{StaticResource RlAccent}" BorderThickness="1.5" CornerRadius="14" Padding="16,10"
+              Visibility="{x:Bind local:Fmt.VisText(Vm.LastError), Mode=OneWay}">
+        <Grid ColumnSpacing="12">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+          <FontIcon Glyph="&#xE783;" FontSize="18" Foreground="{StaticResource RlAccent}" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1" Text="{x:Bind Vm.LastError, Mode=OneWay}" Foreground="{StaticResource RlText}" TextWrapping="Wrap" VerticalAlignment="Center" IsTextSelectionEnabled="True" />
+          <Button Grid.Column="2" Content="Dismiss" Click="OnDismissError" />
+        </Grid>
+      </Border>
       <InfoBar Severity="Warning" IsOpen="True" IsClosable="False" Title="Redline Helper needs an update"
                Message="The background helper is from a different version of Redline. Updating it takes one admin prompt."
                Visibility="{x:Bind Vm.HelperOutdated, Mode=OneWay}">

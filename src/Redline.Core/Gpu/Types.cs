@@ -108,6 +108,7 @@ public static class GpuDiscovery
         {
             try
             {
+                using var _ = Diagnostics.HelperLog.Time($"discover {b.Vendor}");
                 if (!b.IsAvailable()) continue;
                 devices.AddRange(b.Discover());
             }

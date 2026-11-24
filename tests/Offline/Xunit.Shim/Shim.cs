@@ -49,6 +49,11 @@ public static class Assert
     public static void InRange<T>(T actual, T low, T high) where T : IComparable<T> { if (actual.CompareTo(low) < 0 || actual.CompareTo(high) > 0) throw new XunitException($"Assert.InRange failed. {actual} not in [{low},{high}]"); }
     public static void Contains(string expectedSubstring, string? actual) { if (actual is null || !actual.Contains(expectedSubstring, StringComparison.Ordinal)) throw new XunitException($"Assert.Contains failed. \"{expectedSubstring}\" not in {S(actual)}"); }
     public static void Contains(string expectedSubstring, string? actual, StringComparison cmp) { if (actual is null || !actual.Contains(expectedSubstring, cmp)) throw new XunitException($"Assert.Contains failed. \"{expectedSubstring}\" not in {S(actual)}"); }
+    public static void Matches(string pattern, string? actual)
+    {
+        if (actual is null || !System.Text.RegularExpressions.Regex.IsMatch(actual, pattern)) throw new XunitException($"Assert.Matches failed. Pattern: {pattern} Actual: {actual}");
+    }
+
     public static void StartsWith(string expected, string? actual) { if (actual is null || !actual.StartsWith(expected, StringComparison.Ordinal)) throw new XunitException($"Assert.StartsWith failed. {S(actual)} doesn't start with \"{expected}\""); }
     public static void EndsWith(string expected, string? actual) { if (actual is null || !actual.EndsWith(expected, StringComparison.Ordinal)) throw new XunitException($"Assert.EndsWith failed. {S(actual)}"); }
     public static void DoesNotContain(string sub, string? actual) { if (actual is not null && actual.Contains(sub, StringComparison.Ordinal)) throw new XunitException($"Assert.DoesNotContain failed. \"{sub}\" in {S(actual)}"); }

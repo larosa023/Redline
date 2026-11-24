@@ -14,6 +14,15 @@ var demo = args.Contains("--demo");
 var pipe = args.SkipWhile(a => a != "--pipe").Skip(1).FirstOrDefault() ?? PipeProtocol.PipeName;
 var dataDir = demo ? Path.Combine(Path.GetTempPath(), "RedlineDemo") : InstallLayout.DataDir;
 
+if (!demo)
+{
+    Directory.CreateDirectory(dataDir);
+    Redline.Core.Diagnostics.HelperLog.Init(Path.Combine(dataDir, "helper.log"));
+    Redline.Core.Diagnostics.HelperLog.Write($"helper {Composition.Version} starting (pid {Environment.ProcessId})");
+    AppDomain.CurrentDomain.UnhandledException += (_, e) => Redline.Core.Diagnostics.HelperLog.Write($"CRASH: {e.ExceptionObject}");
+    TaskScheduler.UnobservedTaskException += (_, e) => Redline.Core.Diagnostics.HelperLog.Write($"unobserved: {e.Exception}");
+}
+
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddWindowsService(o => o.ServiceName = InstallLayout.ServiceName);
 builder.Services.AddHostedService(_ => new HelperService(dataDir, demo, pipe));

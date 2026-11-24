@@ -11,7 +11,19 @@ public sealed class LhmCpuMonitor : ICpuMonitor, IGpuExtraSensors, IDisposable
     readonly object _gate = new();
     DateTime _gpuUpdated = DateTime.MinValue;
 
-    public LhmCpuMonitor() => _pc.Open();
+    readonly Task _open;
+
+    /// <summary>
+    /// Opens the sensors in the background: on some PCs (for example with RGB software busy on the memory bus) this
+    /// takes a long time, and it must never hold up the helper. Readings start once it's done.
+    /// </summary>
+    public LhmCpuMonitor() => _open = Task.Run(() =>
+    {
+        using var _ = Redline.Core.Diagnostics.HelperLog.Time("open sensors (LibreHardwareMonitor)");
+        lock (_gate) _pc.Open();
+    });
+
+    bool Ready => _open.IsCompletedSuccessfully;
 
     static double? Val(IEnumerable<ISensor> s, SensorType t, params string[] names) =>
         names.Select(n => s.FirstOrDefault(x => x.SensorType == t && x.Name.Contains(n, StringComparison.OrdinalIgnoreCase))?.Value)
@@ -19,6 +31,7 @@ public sealed class LhmCpuMonitor : ICpuMonitor, IGpuExtraSensors, IDisposable
 
     public CpuState? Read()
     {
+        if (!Ready) return null;
         lock (_gate)
         {
             var cpu = _pc.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Cpu);
@@ -52,6 +65,7 @@ public sealed class LhmCpuMonitor : ICpuMonitor, IGpuExtraSensors, IDisposable
 
     public GpuExtras? Read(string gpuName)
     {
+        if (!Ready) return null;
         lock (_gate)
         {
             var gpu = _pc.Hardware.FirstOrDefault(h => h.HardwareType is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel
@@ -68,5 +82,9 @@ public sealed class LhmCpuMonitor : ICpuMonitor, IGpuExtraSensors, IDisposable
         }
     }
 
-    public void Dispose() => _pc.Close();
+    public void Dispose()
+    {
+        try { _open.Wait(TimeSpan.FromSeconds(5)); } catch (AggregateException) { }
+        if (Ready) lock (_gate) _pc.Close();
+    }
 }

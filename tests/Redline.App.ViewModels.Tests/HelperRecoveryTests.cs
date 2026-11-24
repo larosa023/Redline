@@ -127,6 +127,21 @@ public class HelperRecoveryTests
         await Until(() => !s.HelperMissing && s.State is not null);   // the retry runs in the background
     }
 
+    [Fact]
+    public async Task HelperComesUpLate_ClearsTheSetupError()
+    {
+        var h = new FakeHelper();
+        var gate = new Gate();
+        var s = new ShellViewModel(h, FakeHelper.Inline) { Delay = InstantThenNever(1000) };
+        s.Installer = () => { h.Available = false; return Task.FromResult(true); };
+        await s.RepairCommand.ExecuteAsync();
+        Assert.NotNull(s.LastError);                 // gave up waiting
+        h.Available = true;
+        await s.LoadAsync();                         // the background retry finally connects
+        Assert.False(s.HelperMissing);
+        Assert.Null(s.LastError);
+    }
+
     sealed class EchoHandler : IRequestHandler
     {
         public event Action<IpcMessage>? Event { add { } remove { } }

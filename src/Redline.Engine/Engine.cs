@@ -156,6 +156,7 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
                 try { w.AcceptWaiver(); } catch (Exception) { /* stays monitor-only until accepted again */ }
             }
 
+            Core.Diagnostics.HelperLog.Write($"found {found.Devices.Count} GPU(s): {string.Join(", ", found.Devices.Select(d => d.Name))}");
             var (decision, _) = _journal.Inspect();
             _lastStartup = decision;
             if (decision == StartupDecision.RecoverToFactory)
@@ -164,6 +165,7 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
                 _cpuBoost.RestoreOriginal();
             }
             _journal.MarkStarted();
+            Core.Diagnostics.HelperLog.Write($"startup: {decision}");
 
             foreach (var s in _slots)
             {
@@ -312,7 +314,7 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
         var devices = _slots.Select(s => new DeviceState(s.Dev.Id, s.Dev.Name, s.Dev.Vendor, s.Dev.Capabilities, s.Active, s.ActiveProfileId,
             DriverPolicy.Check(s.Dev.Vendor, s.Dev.DriverVersion), s.Dev is not IRequiresWaiver w || w.WaiverAccepted, !s.Lost)).ToList();
         return new HelperState(_o.HelperVersion, devices, SafeCpu(), _profiles.All(), _settings, _pawnIo(), _lastStartup,
-            AutoTuneTask is { IsCompleted: false }, _best.Best, _best.IsNewBest);
+            _autoTuneRun is { IsCompleted: false }, _best.Best, _best.IsNewBest);
     }
 
     CpuState? SafeCpu()

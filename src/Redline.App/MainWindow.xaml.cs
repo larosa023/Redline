@@ -106,6 +106,8 @@ public sealed partial class MainWindow : Window
             Vm.LastError = $"{string.Join(", ", refused)} {(refused.Count == 1 ? "is" : "are")} already used by another app. Pick a different shortcut in Settings.";
     }
 
+    void OnDismissError(object sender, RoutedEventArgs e) => Vm.LastError = null;
+
     void ShowFromTray()
     {
         AppWindow.Show();
