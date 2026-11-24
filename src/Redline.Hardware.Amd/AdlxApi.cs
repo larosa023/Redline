@@ -236,7 +236,9 @@ public sealed unsafe class AdlxApi : IAdlxApi, IDisposable
 
     public void Dispose()
     {
-        lock (_lock)
+        // If a driver call is stuck (it holds the lock), don't hang the helper's shutdown waiting for it.
+        if (!Monitor.TryEnter(_lock, TimeSpan.FromSeconds(2))) return;
+        try
         {
             foreach (var t in _tuners.Values) { Rel((void*)t.Gfx2); Rel((void*)t.Vram2); Rel((void*)t.Power); }
             _tuners.Clear();
@@ -247,5 +249,6 @@ public sealed unsafe class AdlxApi : IAdlxApi, IDisposable
             if (_system != null && NativeLibrary.TryGetExport(_lib, "ADLXTerminate", out var term)) ((delegate* unmanaged[Cdecl]<int>)term)();
             _system = null;
         }
+        finally { Monitor.Exit(_lock); }
     }
 }

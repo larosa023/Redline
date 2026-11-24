@@ -96,27 +96,49 @@ public interface IGpuBackend
     IReadOnlyList<IGpuDevice> Discover();
 }
 
-public sealed record DiscoveryResult(IReadOnlyList<IGpuDevice> Devices, IReadOnlyList<(Vendor Vendor, string Error)> Errors);
+public sealed record DiscoveryResult(IReadOnlyList<IGpuDevice> Devices, IReadOnlyList<(Vendor Vendor, string Error)> Errors)
+{
+    /// <summary>Vendors whose driver didn't answer in time and were skipped.</summary>
+    public IReadOnlyList<Vendor> TimedOut { get; init; } = [];
+}
 
 public static class GpuDiscovery
 {
-    public static DiscoveryResult DiscoverAll(IEnumerable<IGpuBackend> backends)
+    public static readonly TimeSpan DefaultPerVendorTimeout = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// Asks each vendor's backend for its GPUs. Each runs on its own thread with a time limit: a vendor driver call
+    /// that hangs (seen with AMD's ADLX on a PC with only a CPU's built-in Radeon) is skipped instead of blocking startup.
+    /// </summary>
+    public static DiscoveryResult DiscoverAll(IEnumerable<IGpuBackend> backends, TimeSpan? perVendorTimeout = null)
     {
+        var timeout = perVendorTimeout ?? DefaultPerVendorTimeout;
         var devices = new List<IGpuDevice>();
         var errors = new List<(Vendor, string)>();
+        var timedOut = new List<Vendor>();
         foreach (var b in backends)
         {
-            try
+            IReadOnlyList<IGpuDevice>? found = null;
+            Exception? error = null;
+            var t = new Thread(() =>
             {
-                using var _ = Diagnostics.HelperLog.Time($"discover {b.Vendor}");
-                if (!b.IsAvailable()) continue;
-                devices.AddRange(b.Discover());
-            }
-            catch (Exception e)
+                try
+                {
+                    using var _ = Diagnostics.HelperLog.Time($"discover {b.Vendor}");
+                    found = b.IsAvailable() ? b.Discover() : [];
+                }
+                catch (Exception e) { error = e; }
+            }) { IsBackground = true, Name = $"Redline discover {b.Vendor}" };
+            t.Start();
+            if (!t.Join(timeout))
             {
-                errors.Add((b.Vendor, e.Message));
+                timedOut.Add(b.Vendor);
+                Diagnostics.HelperLog.Write($"discover {b.Vendor}: no answer after {timeout.TotalSeconds:0.#} s, skipped");
+                continue;
             }
+            if (error is not null) errors.Add((b.Vendor, error.Message));
+            else if (found is not null) devices.AddRange(found);
         }
-        return new DiscoveryResult(devices, errors);
+        return new DiscoveryResult(devices, errors) { TimedOut = timedOut };
     }
 }

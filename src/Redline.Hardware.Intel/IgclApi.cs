@@ -178,10 +178,13 @@ public sealed unsafe class IgclApi : IIgclApi, IDisposable
 
     public void Dispose()
     {
-        lock (_lock)
+        // If a driver call is stuck (it holds the lock), don't hang the helper's shutdown waiting for it.
+        if (!Monitor.TryEnter(_lock, TimeSpan.FromSeconds(2))) return;
+        try
         {
             if (_api != 0 && NativeLibrary.TryGetExport(_lib, "ctlClose", out var close)) ((delegate* unmanaged[Cdecl]<nint, int>)close)(_api);
             _api = 0;
         }
+        finally { Monitor.Exit(_lock); }
     }
 }
