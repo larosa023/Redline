@@ -52,6 +52,7 @@ public sealed class TuneViewModel : ObservableObject
         KeepCommand = new AsyncRelayCommand(() => _token is { } t ? _shell.SendAsync(MessageTypes.ConfirmKeep, new TokenRequest(t)) : Task.CompletedTask);
         RevertCommand = new AsyncRelayCommand(() => _token is { } t ? _shell.SendAsync(MessageTypes.RevertNow, new TokenRequest(t)) : Task.CompletedTask);
         DiscardCommand = new RelayCommand(LoadFromActive);
+        AcceptWaiverCommand = new AsyncRelayCommand(() => _shell.Device is { } dv ? _shell.SendAsync(MessageTypes.AcceptIntelWaiver, new DeviceRequest(dv.Id)) : Task.CompletedTask);
         ResetCommand = new AsyncRelayCommand(() => _shell.Device is { } d ? _shell.SendAsync(MessageTypes.ResetFactory, new DeviceRequest(d.Id)) : Task.CompletedTask);
         UndoCommand = new AsyncRelayCommand(() => _shell.Device is { } d ? _shell.SendAsync(MessageTypes.Undo, new DeviceRequest(d.Id)) : Task.CompletedTask);
         AcknowledgeConnectorCommand = new RelayCommand(() => { _ackLocal = true; Changed(); });
@@ -114,8 +115,25 @@ public sealed class TuneViewModel : ObservableObject
         }
     }
 
+    public AsyncRelayCommand AcceptWaiverCommand { get; }
+
+    /// <summary>Intel requires accepting its overclocking terms before any change; until then the card is monitor-only.</summary>
+    public bool NeedsWaiver => _shell.Device is { IntelWaiverAccepted: false };
+
+    public const string WaiverText = "Intel asks you to accept that overclocking may shorten your card's life and isn't covered by its warranty. Redline still keeps every change inside safe limits, with keep-or-revert.";
+
+    /// <summary>A short heads-up for AMD and Intel cards, where Redline's tuning is newer than on NVIDIA.</summary>
+    public string? VendorNote => _shell.Device?.Vendor switch
+    {
+        Vendor.Amd => "AMD tuning is new in Redline and hasn't been tried on every Radeon yet. Every change still goes through keep-or-revert.",
+        Vendor.Intel => "Intel Arc tuning is new in Redline and hasn't been tried on every card yet. Every change still goes through keep-or-revert.",
+        _ => null,
+    };
+
     internal void OnState()
     {
+        OnPropertyChanged(nameof(NeedsWaiver));
+        OnPropertyChanged(nameof(VendorNote));
         var d = _shell.Device;
         var caps = d?.Caps ?? Capabilities.MonitorOnly;
         var wanted = new[]

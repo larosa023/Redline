@@ -12,6 +12,8 @@
     <ProjectReference Include="../Redline.Engine/Redline.Engine.csproj" />
     <ProjectReference Include="../Redline.Platform.Windows/Redline.Platform.Windows.csproj" />
     <ProjectReference Include="../Redline.Hardware.Nvidia/Redline.Hardware.Nvidia.csproj" />
+    <ProjectReference Include="../Redline.Hardware.Amd/Redline.Hardware.Amd.csproj" />
+    <ProjectReference Include="../Redline.Hardware.Intel/Redline.Hardware.Intel.csproj" />
     <ProjectReference Include="../Redline.Stress/Redline.Stress.csproj" />
   </ItemGroup>
   <ItemGroup>

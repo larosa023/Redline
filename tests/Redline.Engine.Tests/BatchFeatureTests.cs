@@ -1,3 +1,5 @@
+using Redline.Core.Sim;
+using Redline.Core.Tests.Fakes;
 using Redline.Core.Gpu;
 using Redline.Core.Stats;
 using Redline.Core.Storage;
@@ -119,5 +121,52 @@ public class ReportExportTests
         Assert.DoesNotContain("notes.exe", r.Files.Keys);
         Assert.Contains(f.Gpu.Name, r.Files["system.json"]);
         Assert.Contains("helperVersion", r.Files["system.json"]);
+    }
+}
+
+public class WaiverTests
+{
+    sealed class WaiverGpu(SimGpuDevice inner) : IGpuDevice, IRequiresWaiver
+    {
+        public int Accepts;
+        public bool WaiverAccepted { get; private set; }
+        public void AcceptWaiver() { Accepts++; WaiverAccepted = true; }
+        public string Id => inner.Id; public string Name => inner.Name; public Vendor Vendor => Vendor.Intel;
+        public string DriverVersion => inner.DriverVersion; public Capabilities Capabilities => inner.Capabilities;
+        public Task<TuneSettings> ReadAsync(CancellationToken ct) => inner.ReadAsync(ct);
+        public Task<ApplyResult> ApplyAsync(TuneSettings s, CancellationToken ct) => inner.ApplyAsync(s, ct);
+        public Task ResetAsync(CancellationToken ct) => inner.ResetAsync(ct);
+        public Telemetry? ReadTelemetry() => inner.ReadTelemetry();
+    }
+
+    sealed class OneGpu(IGpuDevice d) : IGpuBackend
+    {
+        public Vendor Vendor => Vendor.Intel;
+        public bool IsAvailable() => true;
+        public IReadOnlyList<IGpuDevice> Discover() => [d];
+    }
+
+    static async Task<Redline.Engine.Engine> Start(EngineFixture f, IGpuDevice d)
+    {
+        var e = new Redline.Engine.Engine(new EngineOptions(f.DataDir), [new OneGpu(d)], new SimStressRunner(), f.Plan, new FakeCpu(),
+            f.Procs, f.Signals, f.Time);
+        await e.StartAsync(default);
+        return e;
+    }
+
+    [Fact]
+    public async Task AcceptedWaiver_IsRememberedAcrossHelperRestarts()
+    {
+        await using var f = new EngineFixture();
+        var first = new WaiverGpu(f.Gpu);
+        await using (var e = await Start(f, first))
+        {
+            Assert.False((await e.HandleAsync(new IpcMessage(1, MessageTypes.GetState, null), default)).PayloadAs<HelperState>()!.Devices[0].IntelWaiverAccepted);
+            await e.HandleAsync(IpcMessage.Create(2, MessageTypes.AcceptIntelWaiver, new DeviceRequest(first.Id)), default);
+        }
+        var second = new WaiverGpu(f.Gpu);
+        await using var e2 = await Start(f, second);
+        Assert.Equal(1, second.Accepts);   // Intel wants the waiver set each session; Redline re-sends the user's earlier yes
+        Assert.True((await e2.HandleAsync(new IpcMessage(3, MessageTypes.GetState, null), default)).PayloadAs<HelperState>()!.Devices[0].IntelWaiverAccepted);
     }
 }

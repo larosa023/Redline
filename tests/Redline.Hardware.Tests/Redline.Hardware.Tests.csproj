@@ -5,5 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Redline.Hardware.Nvidia/Redline.Hardware.Nvidia.csproj" />
+    <ProjectReference Include="../../src/Redline.Hardware.Amd/Redline.Hardware.Amd.csproj" />
+    <ProjectReference Include="../../src/Redline.Hardware.Intel/Redline.Hardware.Intel.csproj" />
   </ItemGroup>
 </Project>

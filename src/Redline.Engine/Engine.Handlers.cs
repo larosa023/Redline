@@ -273,7 +273,15 @@ public sealed partial class Engine
     IpcMessage AcceptWaiver(IpcMessage req)
     {
         var s = SlotFor(Need<DeviceRequest>(req).DeviceId);
-        if (s.Dev is IRequiresWaiver w) w.AcceptWaiver();
+        if (s.Dev is IRequiresWaiver w)
+        {
+            w.AcceptWaiver();
+            if (!_settings.AcceptedWaivers.Contains(s.Dev.Id))
+            {
+                _settings = _settings with { AcceptedWaivers = [.. _settings.AcceptedWaivers, s.Dev.Id] };
+                _settingsStore.Save(_settings);
+            }
+        }
         return IpcMessage.OkFor(req.Id, BuildState());
     }
 

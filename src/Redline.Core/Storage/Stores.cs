@@ -44,6 +44,8 @@ public sealed record AppSettings : IVersioned
     public SafetyOptions Safety { get; init; } = SafetyOptions.Default;
     public string BaseProfileId { get; init; } = "factory";
     public double? PersonalBestMhz { get; init; }
+    /// <summary>GPUs whose vendor overclocking waiver (Intel) the user accepted; re-sent each time the helper starts.</summary>
+    public IReadOnlyList<string> AcceptedWaivers { get; init; } = [];
 }
 
 public sealed record Profile(string Id, string Name, string Icon, TuneSettings Gpu, CpuBoostSettings? Cpu,

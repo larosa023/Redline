@@ -150,6 +150,10 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
         {
             found = GpuDiscovery.DiscoverAll(_backends);
             _slots.AddRange(found.Devices.Select(d => new Slot(d) { Guard = new TemperatureGuard(_settings.TempCeilingC) }));
+            foreach (var w in _slots.Select(x => x.Dev).OfType<IRequiresWaiver>().Where(w => !w.WaiverAccepted && _settings.AcceptedWaivers.Contains(((IGpuDevice)w).Id)))
+            {
+                try { w.AcceptWaiver(); } catch (Exception) { /* stays monitor-only until accepted again */ }
+            }
 
             var (decision, _) = _journal.Inspect();
             _lastStartup = decision;

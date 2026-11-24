@@ -4,6 +4,8 @@ using Redline.Core.Gpu;
 using Redline.Core.Sim;
 using Redline.Core.Stress;
 using Redline.Engine;
+using Redline.Hardware.Amd;
+using Redline.Hardware.Intel;
 using Redline.Hardware.Nvidia;
 using Redline.Platform.Windows;
 using Redline.Stress;
@@ -20,7 +22,7 @@ public static class Composition
     {
         IEnumerable<IGpuBackend> backends = demo
             ? [new SimGpuBackend(new SimGpuDevice(new SimGpuSpec("Redline Demo GPU", DemoCaps(), 180, 1100, -60, 1000, 350), "demo-0"))]
-            : [new NvidiaBackend(new NvmlApi())];
+            : [new NvidiaBackend(new NvmlApi()), new AmdBackend(Own(new AdlxApi(), owned)), new IntelBackend(Own(new IgclApi(), owned))];
         var cpu = new LhmCpuMonitor(); owned.Add(cpu);
         IProcessWatcher procs = (IProcessWatcher?)TryCreate(() => new WmiProcessWatcher(), owned) ?? new NoProcesses();
         IStabilitySignals signals = (IStabilitySignals?)TryCreate(() => new EventLogStabilitySignals(), owned) ?? new NoSignals();
@@ -29,6 +31,8 @@ public static class Composition
             new D3D11StressRunner(new GoldenStore(dataDir), forceWarp: demo), new PowrProfPowerPlan(), cpu, procs, signals,
             TimeProvider.System, PawnIoDetector.IsInstalled, extras: demo ? null : cpu, frames: frames);
     }
+
+    static T Own<T>(T t, List<IDisposable> owned) where T : IDisposable { owned.Add(t); return t; }
 
     static T? TryCreate<T>(Func<T> f, List<IDisposable> owned) where T : class, IDisposable
     {

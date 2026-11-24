@@ -6,6 +6,13 @@
     xmlns:vm="using:Redline.App.ViewModels">
   <StackPanel Spacing="16" MaxWidth="820" HorizontalAlignment="Left">
     <TextBlock Text="Tune" FontFamily="{StaticResource RlDisplay}" FontSize="32" FontWeight="SemiBold" Foreground="{StaticResource RlText}" />
+    <InfoBar Severity="Warning" IsOpen="True" IsClosable="False" Title="Intel's overclocking terms"
+             Message="Intel asks you to accept that overclocking may shorten your card's life and isn't covered by its warranty. Redline still keeps every change inside safe limits, with keep-or-revert."
+             Visibility="{x:Bind Vm.Tune.NeedsWaiver, Mode=OneWay}">
+      <InfoBar.ActionButton><Button Content="I accept" Command="{x:Bind Vm.Tune.AcceptWaiverCommand}" /></InfoBar.ActionButton>
+    </InfoBar>
+    <InfoBar Severity="Informational" IsOpen="True" IsClosable="False" Message="{x:Bind Vm.Tune.VendorNote, Mode=OneWay}"
+             Visibility="{x:Bind local:Fmt.VisText(Vm.Tune.VendorNote), Mode=OneWay}" />
     <TextBlock Text="Move the sliders, then press Apply. Nothing changes on your card until you do, and changes undo themselves after 15 seconds unless you keep them."
                Foreground="{StaticResource RlMuted}" TextWrapping="Wrap" FontSize="14" />
 
