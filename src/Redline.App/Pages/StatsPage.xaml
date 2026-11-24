@@ -1,0 +1,17 @@
+<UserControl
+    x:Class="Redline.App.Pages.StatsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <StackPanel Spacing="16">
+    <Grid>
+      <TextBlock Text="Stats" FontFamily="{StaticResource RlDisplay}" FontSize="32" FontWeight="SemiBold" Foreground="{StaticResource RlText}" />
+      <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right" VerticalAlignment="Center">
+        <Button x:Name="R5" Content="5 min" Click="OnRange" Tag="0" CornerRadius="999" MinHeight="36" Padding="14,6" />
+        <Button x:Name="R60" Content="1 hour" Click="OnRange" Tag="1" CornerRadius="999" MinHeight="36" Padding="14,6" />
+        <Button x:Name="R24" Content="24 hours" Click="OnRange" Tag="2" CornerRadius="999" MinHeight="36" Padding="14,6" />
+      </StackPanel>
+    </Grid>
+    <TextBlock x:Name="Empty" Text="Collecting readings… graphs appear after a few seconds." Foreground="{StaticResource RlMuted}" />
+    <VariableSizedWrapGrid x:Name="Cards" Orientation="Horizontal" ItemWidth="380" ItemHeight="200" />
+  </StackPanel>
+</UserControl>

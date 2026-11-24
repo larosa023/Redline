@@ -102,6 +102,90 @@
       </Border>
     </Grid>
 
+    <!-- Details -->
+    <Grid ColumnSpacing="16">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+      <Border Background="{StaticResource RlSurface}" BorderBrush="{StaticResource RlLine}" BorderThickness="1" CornerRadius="22" Padding="22">
+        <StackPanel Spacing="10">
+          <Grid>
+            <TextBlock Text="Graphics card details" FontWeight="SemiBold" FontSize="15" Foreground="{StaticResource RlText}" />
+            <Border HorizontalAlignment="Right" Background="{StaticResource RlSurface2}" CornerRadius="999" Padding="10,3">
+              <TextBlock Text="{x:Bind Vm.Home.LimitText, Mode=OneWay}" FontSize="12" Foreground="{StaticResource RlText}" />
+            </Border>
+          </Grid>
+          <Grid RowSpacing="8" ColumnSpacing="12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <Grid.RowDefinitions><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /></Grid.RowDefinitions>
+            <TextBlock Text="Memory clock" Foreground="{StaticResource RlMuted}" /><TextBlock Grid.Column="1" Text="{x:Bind Vm.Home.MemClockText, Mode=OneWay}" Foreground="{StaticResource RlText}" FontWeight="SemiBold" />
+            <TextBlock Grid.Row="1" Text="Hotspot temp" Foreground="{StaticResource RlMuted}" /><TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind Vm.Home.HotspotText, Mode=OneWay}" Foreground="{StaticResource RlText}" FontWeight="SemiBold" />
+            <TextBlock Grid.Row="2" Text="Memory temp" Foreground="{StaticResource RlMuted}" /><TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind Vm.Home.MemTempText, Mode=OneWay}" Foreground="{StaticResource RlText}" FontWeight="SemiBold" />
+            <TextBlock Grid.Row="3" Text="Video memory" Foreground="{StaticResource RlMuted}" /><TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Bind Vm.Home.VramText, Mode=OneWay}" Foreground="{StaticResource RlText}" FontWeight="SemiBold" />
+            <TextBlock Grid.Row="4" Text="Fan speed" Foreground="{StaticResource RlMuted}" /><TextBlock Grid.Row="4" Grid.Column="1" Text="{x:Bind Vm.Home.FanRpmText, Mode=OneWay}" Foreground="{StaticResource RlText}" FontWeight="SemiBold" />
+            <TextBlock Grid.Row="5" Text="Power" Foreground="{StaticResource RlMuted}" /><TextBlock Grid.Row="5" Grid.Column="1" Text="{x:Bind Vm.Home.PowerLimitText, Mode=OneWay}" Foreground="{StaticResource RlText}" FontWeight="SemiBold" />
+          </Grid>
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="1" Background="{StaticResource RlSurface}" BorderBrush="{StaticResource RlLine}" BorderThickness="1" CornerRadius="22" Padding="22">
+        <StackPanel Spacing="10">
+          <TextBlock Text="CPU and memory" FontWeight="SemiBold" FontSize="15" Foreground="{StaticResource RlText}" />
+          <Grid ColumnSpacing="12" RowSpacing="8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <Grid.RowDefinitions><RowDefinition /><RowDefinition /></Grid.RowDefinitions>
+            <TextBlock Text="RAM in use" Foreground="{StaticResource RlMuted}" /><TextBlock Grid.Column="1" Text="{x:Bind Vm.Home.RamText, Mode=OneWay}" Foreground="{StaticResource RlText}" FontWeight="SemiBold" />
+            <TextBlock Grid.Row="1" Text="CPU power" Foreground="{StaticResource RlMuted}" /><TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind Vm.Home.CpuPowerText, Mode=OneWay}" Foreground="{StaticResource RlText}" FontWeight="SemiBold" />
+          </Grid>
+          <ItemsControl ItemsSource="{x:Bind Vm.Home.Cores}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><VariableSizedWrapGrid Orientation="Horizontal" ItemWidth="140" ItemHeight="34" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:CoreItem">
+                <StackPanel Margin="0,0,10,0">
+                  <TextBlock FontSize="12" Foreground="{StaticResource RlMuted}"><Run Text="{x:Bind Name}" /><Run Text=" · " /><Run Text="{x:Bind ClockText}" /></TextBlock>
+                  <ProgressBar Value="{x:Bind LoadPct}" Maximum="100" Foreground="{StaticResource RlAccent}" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- Profile tools -->
+    <Border Background="{StaticResource RlSurface}" BorderBrush="{StaticResource RlLine}" BorderThickness="1" CornerRadius="22" Padding="22">
+      <StackPanel Spacing="12">
+        <Grid ColumnSpacing="12">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
+          <TextBlock Text="Profile tools" FontWeight="SemiBold" FontSize="15" Foreground="{StaticResource RlText}" VerticalAlignment="Center" />
+          <ComboBox x:Name="ToolProfile" Grid.Column="1" HorizontalAlignment="Stretch" DisplayMemberPath="Name" SelectionChanged="OnToolProfile" />
+        </Grid>
+        <Grid ColumnSpacing="16">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+          <StackPanel Spacing="8">
+            <TextBlock Text="Before/after check" FontWeight="SemiBold" Foreground="{StaticResource RlText}" />
+            <TextBlock Text="About a minute: factory vs. this profile." Foreground="{StaticResource RlMuted}" FontSize="13" TextWrapping="Wrap" />
+            <Button Content="Run check" Command="{x:Bind Vm.Tools.BeforeAfterCommand}" CornerRadius="12" MinHeight="36" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="8">
+            <TextBlock Text="Chip score" FontWeight="SemiBold" Foreground="{StaticResource RlText}" />
+            <Border x:Name="ScoreCard" Background="{StaticResource RlSurface2}" CornerRadius="14" Padding="12">
+              <StackPanel>
+                <TextBlock Text="{x:Bind Vm.Home.GpuName, Mode=OneWay}" FontSize="12" Foreground="{StaticResource RlMuted}" />
+                <TextBlock Text="{x:Bind Vm.Tools.ScoreText, Mode=OneWay}" FontFamily="{StaticResource RlDisplay}" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource RlText}" TextWrapping="Wrap" />
+                <TextBlock Text="Redline" FontSize="11" Foreground="{StaticResource RlAccent}" FontWeight="Bold" />
+              </StackPanel>
+            </Border>
+            <Button Content="Save as image" Click="OnSaveScore" CornerRadius="12" MinHeight="36" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" Spacing="8">
+            <TextBlock Text="Share" FontWeight="SemiBold" Foreground="{StaticResource RlText}" />
+            <Button Content="Copy share code" Click="OnCopyCode" CornerRadius="12" MinHeight="36" />
+            <TextBox PlaceholderText="Paste a friend's code" Text="{x:Bind Vm.Tools.ImportCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            <Button Content="Import" Command="{x:Bind Vm.Tools.ImportCommand}" CornerRadius="12" MinHeight="36" />
+          </StackPanel>
+        </Grid>
+        <TextBlock Text="{x:Bind Vm.Tools.Message, Mode=OneWay}" Foreground="{StaticResource RlText}" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
     <!-- Profiles -->
     <TextBlock Text="Profiles" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource RlText}" />
     <ItemsControl ItemsSource="{x:Bind Vm.Home.Profiles}">

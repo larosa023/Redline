@@ -16,6 +16,7 @@ namespace Redline.App;
 public sealed partial class MainWindow : Window
 {
     readonly HelperLauncher _launcher;
+    readonly OverlayWindow _overlay;
     readonly Dictionary<string, FrameworkElement> _pages = new();
     readonly Dictionary<string, Button> _navButtons = new();
     string _current = "Home";
@@ -42,6 +43,9 @@ public sealed partial class MainWindow : Window
         _pages["Tune"] = new TunePage(Vm);
         _pages["Fans"] = new FansPage(Vm);
         _pages["Auto-tune"] = new AutoTunePage(Vm);
+        _pages["Games"] = new GamesPage(Vm);
+        _pages["Stats"] = new StatsPage(Vm);
+        _pages["CPU"] = new CpuPage(Vm);
         _pages["Settings"] = new SettingsPage(Vm);
         foreach (var name in _pages.Keys) AddNav(name);
         Navigate("Home");
@@ -56,7 +60,13 @@ public sealed partial class MainWindow : Window
         };
         ThemeBrushes.Changed += () => { Root.RequestedTheme = ThemeBrushes.ElementTheme; UpdateNav(); BuildSwatches(); };
         Root.RequestedTheme = ThemeBrushes.ElementTheme;
-        Closed += async (_, _) => await _launcher.DisposeAsync();
+        _overlay = new OverlayWindow();
+        Vm.Overlay.PropertyChanged += (_, _) => _overlay.Update(Vm.Overlay.Visible, Vm.Overlay.FpsText, Vm.Overlay.StatsText, Vm.Overlay.Corner);
+        var overlayTimer = DispatcherQueue.CreateTimer();
+        overlayTimer.Interval = TimeSpan.FromSeconds(1);
+        overlayTimer.Tick += (_, _) => Vm.Overlay.Tick(DateTimeOffset.UtcNow);
+        overlayTimer.Start();
+        Closed += async (_, _) => { _overlay.Dispose(); await _launcher.DisposeAsync(); };
         _ = StartAsync();
     }
 

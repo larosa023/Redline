@@ -9,6 +9,12 @@
         <Slider x:Name="Ceiling" Header="Temperature limit (°C) — Redline eases off your tune above this" Minimum="70" Maximum="90" StepFrequency="1" ValueChanged="OnCeiling" />
         <ToggleSwitch x:Name="PowerOptIn" Header="Allow power limit above 100%" Toggled="OnPowerOptIn" />
         <NumberBox x:Name="Rate" Header="Electricity price per kWh" Minimum="0" Maximum="5" SmallChange="0.01" SpinButtonPlacementMode="Inline" ValueChanged="OnRate" />
+        <ToggleSwitch x:Name="Overlay" Header="In-game overlay (FPS, 1% lows, temperatures)" Toggled="OnOverlay" />
+        <ComboBox x:Name="Corner" Header="Overlay position" SelectionChanged="OnCorner" MinWidth="200">
+          <x:String>TopLeft</x:String><x:String>TopRight</x:String><x:String>BottomLeft</x:String><x:String>BottomRight</x:String>
+        </ComboBox>
+        <TextBlock Text="The overlay shows over borderless and windowed games. Some exclusive-fullscreen games hide it. It never touches the game itself, so it's safe with anti-cheat."
+                   Foreground="{StaticResource RlMuted}" TextWrapping="Wrap" FontSize="13" />
         <TextBlock Text="Redline sends nothing about you anywhere. The only thing it checks online is whether there's an update."
                    Foreground="{StaticResource RlMuted}" TextWrapping="Wrap" />
         <TextBlock x:Name="Version" Foreground="{StaticResource RlMuted}" />

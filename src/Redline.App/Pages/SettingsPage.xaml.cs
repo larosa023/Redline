@@ -24,6 +24,8 @@ public sealed partial class SettingsPage : UserControl
         Ceiling.Value = s.Settings.TempCeilingC;
         PowerOptIn.IsOn = s.Settings.Safety.AllowPowerAbove100;
         Rate.Value = (double)s.Settings.ElectricityRatePerKwh;
+        Overlay.IsOn = s.Settings.OverlayEnabled;
+        Corner.SelectedItem = s.Settings.OverlayCorner;
         Version.Text = $"Redline {typeof(SettingsPage).Assembly.GetName().Version?.ToString(3)} · Helper {s.HelperVersion}";
         _loading = false;
     }
@@ -38,6 +40,18 @@ public sealed partial class SettingsPage : UserControl
     {
         if (_loading) return;
         await _vm.UpdateSettingsAsync(s => s with { Safety = s.Safety with { AllowPowerAbove100 = PowerOptIn.IsOn } });
+    }
+
+    async void OnOverlay(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        if (_loading) return;
+        await _vm.UpdateSettingsAsync(s => s with { OverlayEnabled = Overlay.IsOn });
+    }
+
+    async void OnCorner(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || Corner.SelectedItem is not string c) return;
+        await _vm.UpdateSettingsAsync(s => s with { OverlayCorner = c });
     }
 
     async void OnRate(NumberBox sender, NumberBoxValueChangedEventArgs e)
