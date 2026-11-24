@@ -60,6 +60,8 @@ public sealed record DeviceRequest(string DeviceId);
 public sealed record StageApplyRequest(string DeviceId, TuneSettings Settings, SafetyOptions Safety);
 public sealed record StageApplyResponse(Guid Token, TuneSettings Applied, IReadOnlyList<SafetyIssue> Issues, int Seconds);
 public sealed record TokenRequest(Guid Token);
+/// <summary>The helper's own files for a diagnostics report, as text. The app writes the zip as the signed-in user.</summary>
+public sealed record ReportResponse(IReadOnlyDictionary<string, string> Files);
 public sealed record ApplyProfileRequest(string DeviceId, string ProfileId);
 public sealed record ProfileRequest(Profile Profile);
 public sealed record AddProfileRequest(string Name, string Icon);

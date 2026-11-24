@@ -100,3 +100,24 @@ public class BatchFeatureTests : IAsyncLifetime
         Assert.Contains(F.Events, e => e.Type == MessageTypes.BeforeAfterResult);
     }
 }
+
+public class ReportExportTests
+{
+    [Fact]
+    public async Task ExportReport_ReturnsHelperFiles_WithSystemSummary()
+    {
+        await using var f = new EngineFixture();
+        await f.StartAsync();
+        File.WriteAllText(Path.Combine(f.DataDir, "install.log"), "installed");
+        File.WriteAllText(Path.Combine(f.DataDir, "notes.exe"), "not included");
+
+        var r = (await f.Send(MessageTypes.ExportReport)).PayloadAs<ReportResponse>()!;
+
+        Assert.Contains("system.json", r.Files.Keys);
+        Assert.Contains("tempCeilingC", r.Files["system.json"]);   // settings travel in the summary even before settings.json exists
+        Assert.Equal("installed", r.Files["install.log"]);
+        Assert.DoesNotContain("notes.exe", r.Files.Keys);
+        Assert.Contains(f.Gpu.Name, r.Files["system.json"]);
+        Assert.Contains("helperVersion", r.Files["system.json"]);
+    }
+}

@@ -124,8 +124,7 @@ public class HelperRecoveryTests
         await Until(() => gate.Waits == 1);
         h.Available = true;
         gate.Release();
-        await Until(() => !s.HelperMissing);
-        Assert.NotNull(s.State);
+        await Until(() => !s.HelperMissing && s.State is not null);   // the retry runs in the background
     }
 
     sealed class EchoHandler : IRequestHandler

@@ -21,6 +21,15 @@
                      Foreground="{StaticResource RlMuted}" TextWrapping="Wrap" FontSize="13" />
           <StackPanel x:Name="Shortcuts" Spacing="8" />
         </StackPanel>
+        <StackPanel Spacing="8">
+          <TextBlock Text="Something not working?" Foreground="{StaticResource RlText}" FontWeight="SemiBold" />
+          <TextBlock Text="Create a report saves a zip to your Downloads folder with your hardware summary, Redline's settings and recent logs. Your user name and PC name are removed. It's only shared if you attach it somewhere yourself."
+                     Foreground="{StaticResource RlMuted}" TextWrapping="Wrap" FontSize="13" />
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <Button x:Name="ReportButton" Content="Create report" Click="OnReport" />
+            <TextBlock x:Name="ReportMessage" Foreground="{StaticResource RlMuted}" TextWrapping="Wrap" VerticalAlignment="Center" MaxWidth="560" />
+          </StackPanel>
+        </StackPanel>
         <TextBlock Text="Redline sends nothing about you anywhere. The only thing it checks online is whether there's an update."
                    Foreground="{StaticResource RlMuted}" TextWrapping="Wrap" />
         <TextBlock x:Name="Version" Foreground="{StaticResource RlMuted}" />

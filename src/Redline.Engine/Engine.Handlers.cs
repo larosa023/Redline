@@ -39,6 +39,7 @@ public sealed partial class Engine
                 MessageTypes.Quit => await QuitAsync(req),
                 MessageTypes.GetSeries => IpcMessage.OkFor(req.Id, new SeriesResponse(_statsHistory.Query(Need<SeriesRequest>(req).Range))),
                 MessageTypes.ImportProfile => ImportProfile(req),
+                MessageTypes.ExportReport => IpcMessage.OkFor(req.Id, new ReportResponse(ReportFiles())),
                 MessageTypes.RunBeforeAfter => StartBeforeAfter(req),
                 _ => await ExtraAsync(req),
             };
@@ -285,5 +286,36 @@ public sealed partial class Engine
             SetBaseProfile(Profile.FactoryId);
         }
         return IpcMessage.OkFor(req.Id);
+    }
+
+    static readonly string[] ReportExtensions = [".json", ".log"];
+
+    /// <summary>System summary plus Redline's own data files (top level of the data folder, .json/.log only).</summary>
+    Dictionary<string, string> ReportFiles()
+    {
+        var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in Directory.EnumerateFiles(_o.DataDir))
+        {
+            if (!ReportExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)) continue;
+            try
+            {
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                if (fs.Length > 4 * 1024 * 1024) fs.Seek(-4 * 1024 * 1024, SeekOrigin.End);
+                files[Path.GetFileName(path)] = new StreamReader(fs).ReadToEnd();
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+        var system = new
+        {
+            helperVersion = _o.HelperVersion,
+            os = Environment.OSVersion.VersionString,
+            is64Bit = Environment.Is64BitOperatingSystem,
+            processors = Environment.ProcessorCount,
+            createdUtc = _time.GetUtcNow(),
+            state = BuildState(),
+        };
+        files["system.json"] = System.Text.Json.JsonSerializer.Serialize(system, new System.Text.Json.JsonSerializerOptions(PipeProtocol.Options) { WriteIndented = true });
+        return files;
     }
 }

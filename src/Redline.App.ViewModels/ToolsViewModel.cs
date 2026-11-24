@@ -80,4 +80,31 @@ public sealed class ToolsViewModel : ObservableObject
             : $"Added \"{r.Profile.Name}\". Run a before/after check or auto-tune to confirm it's stable on your card.";
         ImportCode = "";
     }
+
+    /// <summary>
+    /// Saves a diagnostics zip into <paramref name="folder"/> (the app passes Downloads) and returns its path.
+    /// Works even if the helper is down: then the zip has only the app's logs. Nothing is uploaded.
+    /// </summary>
+    public async Task<string?> CreateReportAsync(string folder, IEnumerable<string> appLogDirs)
+    {
+        IReadOnlyDictionary<string, string> helperFiles = new Dictionary<string, string>();
+        if (await _shell.SendAsync(MessageTypes.ExportReport, null) is { } r && r.PayloadAs<ReportResponse>() is { } rep)
+            helperFiles = rep.Files;
+        else
+            helperFiles = new Dictionary<string, string> { ["helper-unavailable.txt"] = "Redline Helper didn't answer when this report was made." };
+        try
+        {
+            Directory.CreateDirectory(folder);
+            var path = Path.Combine(folder, $"Redline-report-{DateTime.Now:yyyy-MM-dd-HHmmss}.zip");
+            await Task.Run(() => Redline.Core.Diagnostics.ReportBuilder.BuildZip(path, helperFiles, appLogDirs,
+                Redline.Core.Diagnostics.ReportRedaction.ForCurrentUser(), DateTimeOffset.Now));
+            Message = $"Report saved: {Path.GetFileName(path)}. Attach it to a GitHub issue if you'd like help.";
+            return path;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Message = $"Couldn't save the report: {e.Message}";
+            return null;
+        }
+    }
 }

@@ -121,6 +121,20 @@ public sealed partial class SettingsPage : UserControl
         await _vm.UpdateSettingsAsync(s => s with { OverlayCorner = c });
     }
 
+    async void OnReport(object sender, RoutedEventArgs e)
+    {
+        ReportButton.IsEnabled = false;
+        try
+        {
+            var local = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Redline");
+            var downloads = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            var path = await _vm.Tools.CreateReportAsync(downloads, [Path.Combine(local, "logs"), local]);
+            ReportMessage.Text = _vm.Tools.Message;
+            if (path is not null) System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{path}\"");
+        }
+        finally { ReportButton.IsEnabled = true; }
+    }
+
     async void OnRate(NumberBox sender, NumberBoxValueChangedEventArgs e)
     {
         if (_loading || double.IsNaN(e.NewValue)) return;
