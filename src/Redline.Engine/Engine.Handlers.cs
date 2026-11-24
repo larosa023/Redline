@@ -4,6 +4,7 @@ using Redline.Core.Gpu;
 using Redline.Core.History;
 using Redline.Core.Safety;
 using Redline.Core.Storage;
+using Redline.Core.Stats;
 using Redline.Ipc;
 
 namespace Redline.Engine;
@@ -36,6 +37,9 @@ public sealed partial class Engine
                 MessageTypes.AcceptIntelWaiver => AcceptWaiver(req),
                 MessageTypes.GetWeekly => IpcMessage.OkFor(req.Id, new WeeklyResponse(_weekly.Summary(_settings.ElectricityRatePerKwh))),
                 MessageTypes.Quit => await QuitAsync(req),
+                MessageTypes.GetSeries => IpcMessage.OkFor(req.Id, new SeriesResponse(_statsHistory.Query(Need<SeriesRequest>(req).Range))),
+                MessageTypes.ImportProfile => ImportProfile(req),
+                MessageTypes.RunBeforeAfter => StartBeforeAfter(req),
                 _ => await ExtraAsync(req),
             };
         }
@@ -200,6 +204,50 @@ public sealed partial class Engine
     }
 
     sealed class Progress(Action<AutoTuneProgress> a) : IProgress<AutoTuneProgress> { public void Report(AutoTuneProgress v) => a(v); }
+
+    IpcMessage ImportProfile(IpcMessage req)
+    {
+        var p = Need<ImportProfileRequest>(req).Profile;
+        var added = _profiles.Add(p.Name, p.Icon);
+        var caps = Primary?.Dev.Capabilities ?? Capabilities.MonitorOnly;
+        var gpu = SafetyPolicy.Validate(p.Gpu, caps, SafetyOptions.Default).Clamped;
+        _profiles.Update(added with { Gpu = gpu, Cpu = p.Cpu, StabilityTested = false, TestedAt = null, Measured = null });
+        return IpcMessage.OkFor(req.Id, BuildState());
+    }
+
+    IpcMessage StartBeforeAfter(IpcMessage req)
+    {
+        var r = Need<BeforeAfterRequest>(req);
+        var s = SlotFor(r.DeviceId);
+        if (Busy) throw new InvalidOperationException("Another test is running.");
+        var p = TryProfile(r.ProfileId) ?? throw new KeyNotFoundException($"No profile '{r.ProfileId}'.");
+        if (p.Gpu.IsFactory) throw new InvalidOperationException("That profile is the same as factory, so there's nothing to compare.");
+        CancelPending(s);
+        var tuned = SafetyPolicy.Validate(p.Gpu, s.Dev.Capabilities, _settings.Safety).Clamped;
+        var previous = s.Active;
+        var previousProfile = s.ActiveProfileId;
+        BeforeAfterTask = Task.Run(async () =>
+        {
+            BeforeAfter? result = null; string? error = null;
+            try
+            {
+                result = await new BeforeAfterRunner(s.Dev, _stress, _journal).RunAsync(tuned, previous, CancellationToken.None);
+            }
+            catch (Exception e) { error = e.Message; }
+            await _gate.WaitAsync();
+            try
+            {
+                s.Active = await s.Dev.ReadAsync(CancellationToken.None);
+                s.ActiveProfileId = previousProfile;
+                if (result is not null && TryProfile(p.Id) is { } cur && cur.Id != Profile.FactoryId) _profiles.Update(cur with { Measured = result });
+            }
+            finally { _gate.Release(); }
+            Emit(MessageTypes.BeforeAfterResult, new BeforeAfterResultEvent(p.Id, result, error));
+            Emit(MessageTypes.State, BuildState());
+        });
+        Track(BeforeAfterTask);
+        return IpcMessage.OkFor(req.Id);
+    }
 
     IpcMessage CancelAutoTune(IpcMessage req)
     {

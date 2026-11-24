@@ -48,7 +48,27 @@ public sealed record TuneSettings(int? PowerLimitPct, int? CoreOffsetMhz, int? M
 }
 
 public sealed record Telemetry(DateTimeOffset At, double CoreClockMhz, double MemClockMhz, double TempC, double? HotspotC,
-    double PowerW, double UsagePct, double? FanPct, double? FanRpm, double VramUsedMb);
+    double PowerW, double UsagePct, double? FanPct, double? FanRpm, double VramUsedMb)
+{
+    public double? MemTempC { get; init; }
+    public double? VramTotalMb { get; init; }
+    public double? PowerLimitW { get; init; }
+    public double? CoreVoltageMv { get; init; }
+    public LimitReason Limits { get; init; }
+    public double? PowerLimitUsePct => PowerLimitW is > 0 ? PowerW / PowerLimitW * 100 : null;
+}
+
+/// <summary>What is currently holding the GPU's clocks back.</summary>
+[Flags]
+public enum LimitReason { None = 0, Idle = 1, Power = 2, Temperature = 4, Voltage = 8, Slowdown = 16 }
+
+public sealed record GpuExtras(double? HotspotC, double? MemTempC, double? FanRpm, double? CoreVoltageMv);
+
+/// <summary>Extra GPU sensors the vendor library doesn't expose (hotspot, memory junction, fan RPM), matched by GPU name.</summary>
+public interface IGpuExtraSensors
+{
+    GpuExtras? Read(string gpuName);
+}
 
 public sealed record ApplyResult(TuneSettings Requested, TuneSettings Actual)
 {

@@ -48,4 +48,6 @@ public interface INvmlApi
     uint PowerUsageMw(nint h);
     (uint Gpu, uint Memory) Utilization(nint h);
     (ulong Used, ulong Total) Memory(nint h);
+    /// <summary>nvmlDeviceGetCurrentClocksEventReasons (older drivers: ...ThrottleReasons) bitmask.</summary>
+    ulong ClocksEventReasons(nint h);
 }

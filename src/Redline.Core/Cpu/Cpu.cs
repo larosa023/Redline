@@ -19,7 +19,13 @@ public interface IPowerPlan
     void Apply(CpuBoostSettings s);
 }
 
-public sealed record CpuState(string Name, double? PackageTempC, double UsagePct, double? EffectiveClockMhz, double? PackagePowerW, bool SensorsLimited);
+public sealed record CpuState(string Name, double? PackageTempC, double UsagePct, double? EffectiveClockMhz, double? PackagePowerW, bool SensorsLimited)
+{
+    public IReadOnlyList<double> CoreClocksMhz { get; init; } = [];
+    public IReadOnlyList<double> CoreLoadsPct { get; init; } = [];
+    public double? RamUsedGb { get; init; }
+    public double? RamTotalGb { get; init; }
+}
 
 public interface ICpuMonitor
 {

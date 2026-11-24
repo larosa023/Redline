@@ -130,8 +130,18 @@ public sealed class NvmlApi : INvmlApi
     public (uint Gpu, uint Memory) Utilization(nint h) { Check(N.nvmlDeviceGetUtilizationRates(h, out var u), "nvmlDeviceGetUtilizationRates"); return (u.Gpu, u.Memory); }
     public (ulong Used, ulong Total) Memory(nint h) { Check(N.nvmlDeviceGetMemoryInfo(h, out var m), "nvmlDeviceGetMemoryInfo"); return (m.Used, m.Total); }
 
+    public ulong ClocksEventReasons(nint h)
+    {
+        ulong v = 0;
+        try { Check(N.nvmlDeviceGetCurrentClocksEventReasons(h, out v), "nvmlDeviceGetCurrentClocksEventReasons"); }
+        catch (EntryPointNotFoundException) { Check(N.nvmlDeviceGetCurrentClocksThrottleReasons(h, out v), "nvmlDeviceGetCurrentClocksThrottleReasons"); }
+        return v;
+    }
+
     static class N
     {
+        [DllImport(Lib)] public static extern int nvmlDeviceGetCurrentClocksEventReasons(nint h, out ulong reasons);
+        [DllImport(Lib)] public static extern int nvmlDeviceGetCurrentClocksThrottleReasons(nint h, out ulong reasons);
         [StructLayout(LayoutKind.Sequential)]
         public struct ClockOffset { public uint Version; public int Type; public int Pstate; public int ClockOffsetMHz; public int MinClockOffsetMHz; public int MaxClockOffsetMHz; }
         [StructLayout(LayoutKind.Sequential)] public struct Utilization { public uint Gpu; public uint Memory; }

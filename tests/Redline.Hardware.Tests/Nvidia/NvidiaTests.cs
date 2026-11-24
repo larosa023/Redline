@@ -130,3 +130,38 @@ public class NvidiaTests
         Assert.Null(d.ReadTelemetry());
     }
 }
+
+public class NvidiaTelemetryDetailTests
+{
+    static NvidiaDevice Dev(FakeNvml f) => (NvidiaDevice)Assert.Single(new NvidiaBackend(f).Discover());
+
+    [Fact]
+    public void Telemetry_HasPowerLimitAndVramTotal()
+    {
+        var t = Dev(new FakeNvml()).ReadTelemetry()!;
+        Assert.Equal(450, t.PowerLimitW);
+        Assert.Equal(24576, t.VramTotalMb);
+        Assert.Equal(380.0 / 450 * 100, t.PowerLimitUsePct!.Value, 3);
+    }
+
+    [Theory]
+    [InlineData(0x4UL, LimitReason.Power)]
+    [InlineData(0x80UL, LimitReason.Power)]
+    [InlineData(0x20UL, LimitReason.Temperature)]
+    [InlineData(0x40UL, LimitReason.Temperature)]
+    [InlineData(0x1UL, LimitReason.Idle)]
+    [InlineData(0x8UL, LimitReason.Slowdown)]
+    [InlineData(0x0UL, LimitReason.None)]
+    public void LimitReasons_Mapped(ulong mask, LimitReason expected)
+    {
+        var t = Dev(new FakeNvml { Reasons = mask }).ReadTelemetry()!;
+        Assert.Equal(expected, t.Limits);
+    }
+
+    [Fact]
+    public void LimitReasons_Unsupported_None()
+    {
+        var t = Dev(new FakeNvml { ReasonsSupported = false }).ReadTelemetry()!;
+        Assert.Equal(LimitReason.None, t.Limits);
+    }
+}

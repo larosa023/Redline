@@ -19,23 +19,24 @@ public static class MessageTypes
         DeleteProfile = "DeleteProfile", RenameProfile = "RenameProfile", StartAutoTune = "StartAutoTune",
         CancelAutoTune = "CancelAutoTune", RunBeforeAfter = "RunBeforeAfter", UpdateSettings = "UpdateSettings",
         GetHistory = "GetHistory", ExportReport = "ExportReport", AcceptIntelWaiver = "AcceptIntelWaiver",
-        GetWeekly = "GetWeekly", Quit = "Quit";
+        GetWeekly = "GetWeekly", Quit = "Quit", GetSeries = "GetSeries", ImportProfile = "ImportProfile";
 
     // Responses
     public const string Ok = "Ok", ErrorResponse = "Error";
 
     // Events (helper → app)
     public const string State = "State", Telemetry = "Telemetry", AutoTuneProgress = "AutoTuneProgress",
-        KeepOrRevertTick = "KeepOrRevertTick", GuardAction = "GuardAction", Toast = "Toast", FpsSample = "FpsSample";
+        KeepOrRevertTick = "KeepOrRevertTick", GuardAction = "GuardAction", Toast = "Toast", FpsSample = "FpsSample",
+        BeforeAfterResult = "BeforeAfterResult";
 
     public static IReadOnlyList<string> Requests { get; } =
     [
         GetState, SubscribeTelemetry, UnsubscribeTelemetry, StageApply, ConfirmKeep, RevertNow, ApplyProfile, ResetFactory, Undo,
         SaveProfile, AddProfile, DeleteProfile, RenameProfile, StartAutoTune, CancelAutoTune, RunBeforeAfter, UpdateSettings,
-        GetHistory, ExportReport, AcceptIntelWaiver, GetWeekly, Quit,
+        GetHistory, ExportReport, AcceptIntelWaiver, GetWeekly, Quit, GetSeries, ImportProfile,
     ];
 
-    public static IReadOnlyList<string> Events { get; } = [State, Telemetry, AutoTuneProgress, KeepOrRevertTick, GuardAction, Toast, FpsSample];
+    public static IReadOnlyList<string> Events { get; } = [State, Telemetry, AutoTuneProgress, KeepOrRevertTick, GuardAction, Toast, FpsSample, BeforeAfterResult];
 
     public static IReadOnlySet<string> All { get; } = Requests.Concat(Events).Append(Ok).Append(ErrorResponse).ToHashSet();
 }
@@ -85,3 +86,8 @@ public sealed record GuardActionEvent(string DeviceId, string Action, string Mes
 public sealed record ToastEvent(string Title, string Message, string Severity);
 public sealed record FpsSampleEvent(string ProcessName, double AvgFps, double OnePercentLowFps);
 public sealed record WeeklyResponse(WeeklySummary Summary);
+
+public sealed record SeriesRequest(StatsRange Range);
+public sealed record SeriesResponse(IReadOnlyList<StatSeries> Series);
+public sealed record ImportProfileRequest(Profile Profile);
+public sealed record BeforeAfterResultEvent(string ProfileId, BeforeAfter? Result, string? Error);

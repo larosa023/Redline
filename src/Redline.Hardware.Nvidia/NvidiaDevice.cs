@@ -164,6 +164,16 @@ public sealed class NvidiaDevice : IGpuDevice, IFanPercentControl
         return Task.CompletedTask;
     }
 
+    public static LimitReason MapReasons(ulong m)
+    {
+        var r = LimitReason.None;
+        if ((m & 0x1) != 0) r |= LimitReason.Idle;
+        if ((m & (0x4 | 0x80)) != 0) r |= LimitReason.Power;          // SW power cap, HW power brake
+        if ((m & (0x20 | 0x40)) != 0) r |= LimitReason.Temperature;   // SW/HW thermal slowdown
+        if ((m & 0x8) != 0) r |= LimitReason.Slowdown;                // HW slowdown
+        return r;
+    }
+
     public Telemetry? ReadTelemetry()
     {
         try
@@ -172,8 +182,18 @@ public sealed class NvidiaDevice : IGpuDevice, IFanPercentControl
             var (used, _) = _api.Memory(_h);
             double? fan = null;
             try { if (_api.FanCount(_h) > 0) fan = _api.FanSpeed(_h, 0); } catch (NvmlException) { }
+            var (_, total) = _api.Memory(_h);
+            double? limitW = null;
+            try { limitW = _api.PowerLimitMw(_h) / 1000.0; } catch (NvmlException) { }
+            var reasons = LimitReason.None;
+            try { reasons = MapReasons(_api.ClocksEventReasons(_h)); } catch (NvmlException) { }
             return new Telemetry(DateTimeOffset.UtcNow, _api.ClockMhz(_h, NvmlClockType.Graphics), _api.ClockMhz(_h, NvmlClockType.Memory),
-                _api.TemperatureC(_h), null, _api.PowerUsageMw(_h) / 1000.0, util.Gpu, fan, null, used / (1024.0 * 1024.0));
+                _api.TemperatureC(_h), null, _api.PowerUsageMw(_h) / 1000.0, util.Gpu, fan, null, used / (1024.0 * 1024.0))
+            {
+                VramTotalMb = total / (1024.0 * 1024.0),
+                PowerLimitW = limitW,
+                Limits = reasons,
+            };
         }
         catch (NvmlException) { return null; }
     }

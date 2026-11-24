@@ -1,6 +1,7 @@
 using Redline.Core.Gpu;
 using Redline.Core.Safety;
 using Redline.Core.Stats;
+using Redline.Core.Cpu;
 using Redline.Core.Storage;
 using Redline.Ipc;
 
@@ -22,6 +23,17 @@ public sealed partial class Engine
             {
                 Telemetry? t;
                 try { t = s.Dev.ReadTelemetry(); } catch (Exception) { t = null; }
+                if (t is not null && _extras is not null)
+                {
+                    GpuExtras? x = null;
+                    try { x = _extras.Read(s.Dev.Name); } catch (Exception) { }
+                    if (x is not null)
+                        t = t with
+                        {
+                            HotspotC = x.HotspotC ?? t.HotspotC, MemTempC = x.MemTempC ?? t.MemTempC,
+                            FanRpm = x.FanRpm ?? t.FanRpm, CoreVoltageMv = x.CoreVoltageMv ?? t.CoreVoltageMv,
+                        };
+                }
 
                 if (t is null) s.Lost = true;
                 else if (s.Lost)
@@ -62,6 +74,7 @@ public sealed partial class Engine
                     try { await fan.SetFanPercentAsync(curve.Evaluate(t.TempC), CancellationToken.None); } catch (Exception) { }
                 }
 
+                if (s == Primary) RecordHistory(t, cpu);
                 if (t is not null && s == Primary)
                 {
                     var prof = s.ActiveProfileId is { } pid ? TryProfile(pid) : null;
@@ -80,6 +93,31 @@ public sealed partial class Engine
         }
         finally { _gate.Release(); }
         foreach (var (type, payload) in events) Event?.Invoke(IpcMessage.Create(0, type, payload));
+    }
+
+    void RecordHistory(Telemetry? t, Core.Cpu.CpuState? cpu)
+    {
+        var m = new Dictionary<string, double>();
+        if (t is not null)
+        {
+            m["GPU clock"] = t.CoreClockMhz; m["Memory clock"] = t.MemClockMhz; m["GPU temp"] = t.TempC; m["Power"] = t.PowerW;
+            m["GPU load"] = t.UsagePct; m["VRAM"] = t.VramUsedMb / 1024;
+            if (t.HotspotC is { } h) m["Hotspot"] = h;
+            if (t.MemTempC is { } mt) m["Memory temp"] = mt;
+            if (t.PowerLimitUsePct is { } pl) m["Power limit use"] = pl;
+            if (t.FanPct is { } f) m["Fan"] = f;
+            if (t.FanRpm is { } r) m["Fan RPM"] = r;
+        }
+        if (cpu is not null)
+        {
+            m["CPU load"] = cpu.UsagePct;
+            if (cpu.PackageTempC is { } ct) m["CPU temp"] = ct;
+            if (cpu.EffectiveClockMhz is { } cc) m["CPU clock"] = cc;
+            if (cpu.PackagePowerW is { } cp) m["CPU power"] = cp;
+            if (cpu.RamUsedGb is { } ram) m["RAM"] = ram;
+        }
+        if (_lastFps is { } fps && _time.GetUtcNow() - fps.At <= TimeSpan.FromSeconds(6)) m["FPS"] = fps.Fps;
+        if (m.Count > 0) _statsHistory.Add(m);
     }
 
     string? TryActiveProfileFor(TuneSettings s) =>

@@ -25,6 +25,12 @@ public interface IProcessWatcher
     event Action<string>? Stopped;
 }
 
+/// <summary>Frame times per presenting process (PresentMon). Raised about once a second.</summary>
+public interface IFrameSource
+{
+    event Action<string, IReadOnlyList<double>>? Frames;
+}
+
 public interface IStabilitySignals
 {
     /// <summary>Raised with a device id, or "*" when the driver reset affected all GPUs.</summary>
@@ -77,10 +83,18 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
     CancellationTokenSource? _autoTuneCts;
     int _runningGames;
 
+    readonly IGpuExtraSensors? _extras;
+    readonly IFrameSource? _frames;
+    readonly StatsHistory _statsHistory;
+    (DateTimeOffset At, double Fps)? _lastFps;
+
     public Engine(EngineOptions o, IEnumerable<IGpuBackend> backends, IStressRunner stress, IPowerPlan plan, ICpuMonitor cpu,
-        IProcessWatcher procs, IStabilitySignals signals, TimeProvider time, Func<bool>? pawnIoInstalled = null)
+        IProcessWatcher procs, IStabilitySignals signals, TimeProvider time, Func<bool>? pawnIoInstalled = null,
+        IGpuExtraSensors? extras = null, IFrameSource? frames = null)
     {
         _o = o; _backends = backends; _stress = stress; _cpu = cpu; _procs = procs; _signals = signals; _time = time;
+        _extras = extras; _frames = frames;
+        _statsHistory = new StatsHistory(time);
         _pawnIo = pawnIoInstalled ?? (() => false);
         Directory.CreateDirectory(o.DataDir);
         _journal = new SafeStartJournal(Path.Combine(o.DataDir, "journal.json"));
@@ -97,6 +111,17 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
     public event Action<IpcMessage>? Event;
 
     public Task? AutoTuneTask { get; private set; }
+    public Task? BeforeAfterTask { get; private set; }
+
+    bool Busy => AutoTuneTask is { IsCompleted: false } || BeforeAfterTask is { IsCompleted: false };
+
+    void OnFrames(string process, IReadOnlyList<double> frameTimesMs)
+    {
+        if (frameTimesMs.Count == 0) return;
+        var (avg, low) = FrameStats.From(frameTimesMs);
+        _lastFps = (_time.GetUtcNow(), avg);
+        Emit(MessageTypes.FpsSample, new FpsSampleEvent(process, avg, low));
+    }
 
     public TimeSpan CurrentPollInterval => _subscribers > 0 ? _o.Active : _o.Idle;
 
@@ -146,6 +171,7 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
             _procs.Started += OnGameStarted;
             _procs.Stopped += OnGameStopped;
             _signals.DriverReset += OnDriverReset;
+            if (_frames is not null) _frames.Frames += OnFrames;
             _poll = _time.CreateTimer(_ => Track(TickAsync()), null, CurrentPollInterval, CurrentPollInterval);
         }
         finally { _gate.Release(); }
@@ -186,8 +212,10 @@ public sealed partial class Engine : IAsyncDisposable, IRequestHandler
         _poll?.Dispose(); _startupTimer?.Dispose();
         _autoTuneCts?.Cancel();
         _procs.Started -= OnGameStarted; _procs.Stopped -= OnGameStopped; _signals.DriverReset -= OnDriverReset;
+        if (_frames is not null) _frames.Frames -= OnFrames;
         foreach (var s in _slots) { s.PendingTicker?.Dispose(); s.Pending?.Dispose(); }
         try { if (AutoTuneTask is { } t) await t; } catch (OperationCanceledException) { }
+        try { if (BeforeAfterTask is { } b) await b; } catch (Exception) { }
         await IdleAsync();
     }
 

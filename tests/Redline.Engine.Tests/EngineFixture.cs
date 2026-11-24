@@ -53,10 +53,10 @@ public sealed class EngineFixture : IAsyncDisposable
 
     public void SaveSettings(AppSettings s) => new JsonStore<AppSettings>(Path.Combine(DataDir, "settings.json"), () => new AppSettings()).Save(s);
 
-    public async Task<Engine> StartAsync()
+    public async Task<Engine> StartAsync(IGpuExtraSensors? extras = null, IFrameSource? frames = null)
     {
         Engine = new Engine(new EngineOptions(DataDir), [new SimGpuBackend(Gpu)], new SimStressRunner(), Plan, new FakeCpu(),
-            Procs, Signals, Time);
+            Procs, Signals, Time, extras: extras, frames: frames);
         Engine.Event += m => { lock (Events) Events.Add(m); };
         await Engine.StartAsync(default);
         return Engine;

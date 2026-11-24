@@ -15,6 +15,9 @@ public sealed class FakeNvml : INvmlApi
     public uint[] FanPct = [0, 0];
     public bool[] FanManual = [false, false];
     public bool Lost;
+    public ulong Reasons;
+    public bool ReasonsSupported = true;
+    public ulong ClocksEventReasons(nint h) => ReasonsSupported ? Reasons : throw new NvmlException(NvmlReturn.NotSupported, "reasons");
     public List<string> Calls = new();
 
     public bool TryLoad() => DllPresent;
