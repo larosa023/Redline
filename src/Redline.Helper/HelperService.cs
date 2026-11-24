@@ -22,6 +22,7 @@ public sealed class HelperService(string dataDir, bool demo, string pipeName) : 
             using (Redline.Core.Diagnostics.HelperLog.Time("create engine")) _engine = Composition.CreateEngine(dataDir, demo, _owned);
             using (Redline.Core.Diagnostics.HelperLog.Time("start engine")) await _engine.StartAsync(stoppingToken);
             _server = new PipeServer(pipeName, _engine, demo ? null : InstallLayout.CreatePipe);
+            _server.AcceptError += e => Redline.Core.Diagnostics.HelperLog.Write($"pipe: {e.Message}");
             _server.Start();
             Redline.Core.Diagnostics.HelperLog.Write("ready: pipe open");
         }

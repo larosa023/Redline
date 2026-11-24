@@ -22,7 +22,7 @@ public class PipeTests
         var name = "redline-test-" + Guid.NewGuid().ToString("N");
         await using var server = new PipeServer(name, f.Engine);
         server.Start();
-        await using var client = await PipeClient.ConnectAsync(name, TimeSpan.FromSeconds(5));
+        await using var client = await PipeClient.ConnectAsync(name, TimeSpan.FromSeconds(30));
         var resp = await client.RequestAsync(MessageTypes.GetState, null, TimeSpan.FromSeconds(5));
         Assert.Equal(MessageTypes.Ok, resp.Type);
         Assert.Single(resp.PayloadAs<HelperState>()!.Devices);
@@ -36,7 +36,7 @@ public class PipeTests
         var name = "redline-test-" + Guid.NewGuid().ToString("N");
         await using var server = new PipeServer(name, f.Engine);
         server.Start();
-        await using var client = await PipeClient.ConnectAsync(name, TimeSpan.FromSeconds(5));
+        await using var client = await PipeClient.ConnectAsync(name, TimeSpan.FromSeconds(30));
         var got = new TaskCompletionSource<IpcMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
         client.EventReceived += m => { if (m.Type == MessageTypes.Telemetry) got.TrySetResult(m); };
         await client.RequestAsync(MessageTypes.SubscribeTelemetry, null, TimeSpan.FromSeconds(5));

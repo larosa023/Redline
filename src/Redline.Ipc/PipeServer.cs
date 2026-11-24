@@ -19,6 +19,9 @@ public sealed class PipeServer(string pipeName, IRequestHandler handler, Func<st
     readonly List<Task> _tasks = new();
     Task? _accept;
 
+    /// <summary>Raised when a pipe instance couldn't be created (the loop retries every second).</summary>
+    public event Action<Exception>? AcceptError;
+
     public void Start()
     {
         handler.Event += Broadcast;
@@ -32,7 +35,15 @@ public sealed class PipeServer(string pipeName, IRequestHandler handler, Func<st
     {
         while (!_cts.IsCancellationRequested)
         {
-            var pipe = NewPipe();
+            NamedPipeServerStream pipe;
+            try { pipe = NewPipe(); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                // Never let the accept loop die quietly: the helper would look "ready" but accept nobody.
+                AcceptError?.Invoke(e);
+                try { await Task.Delay(1000, _cts.Token); } catch (OperationCanceledException) { return; }
+                continue;
+            }
             try { await pipe.WaitForConnectionAsync(_cts.Token); }
             catch (OperationCanceledException) { await pipe.DisposeAsync(); return; }
             catch (IOException) { await pipe.DisposeAsync(); continue; }
