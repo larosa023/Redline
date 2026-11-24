@@ -8,7 +8,7 @@
       <StackPanel Spacing="18">
         <StackPanel Spacing="8">
           <ToggleSwitch x:Name="StartWithWindows" Header="Put a profile back on when Windows starts" Toggled="OnStartWithWindows" />
-          <ComboBox x:Name="StartupProfile" Header="Profile to use" MinWidth="220" SelectionChanged="OnStartupProfile" />
+          <ComboBox x:Name="StartupProfile" Header="Profile to use" MinWidth="220" PlaceholderText="Run auto-tune first" SelectionChanged="OnStartupProfile" />
           <TextBlock Text="After a restart your card is always at factory settings first. With this on, Redline puts the chosen profile back about 15 seconds after Windows starts. Only profiles that passed auto-tune's full check can be used."
                      Foreground="{StaticResource RlMuted}" TextWrapping="Wrap" FontSize="13" />
         </StackPanel>

@@ -22,6 +22,7 @@ public static class ThemeBrushes
         // Point them at the theme's accent instead; these brushes are updated in place when the theme changes.
         foreach (var k in new[] { "AccentFillColorDefaultBrush", "AccentFillColorSecondaryBrush", "AccentFillColorTertiaryBrush",
                                   "SliderThumbBackground", "SliderThumbBackgroundPointerOver", "SliderThumbBackgroundPressed",
+                                  "SliderTrackValueFill", "SliderTrackValueFillPointerOver", "SliderTrackValueFillPressed",
                                   "ToggleSwitchFillOn", "ToggleSwitchFillOnPointerOver", "ToggleSwitchFillOnPressed",
                                   "AccentAAFillColorDefaultBrush", "ProgressRingForegroundThemeBrush" })
             r[k] = Accent;
